@@ -1350,7 +1350,7 @@
                         this.ctx.globalAlpha = p.life;
                         this.ctx.fillStyle = p.color;
                         this.ctx.shadowColor = p.color;
-                        ctx.shadowBlur = 10;
+                        this.ctx.shadowBlur = 10;  // ✅ FIXED: was 'ctx.shadowBlur = 10'
                         this.ctx.beginPath();
                         this.ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
                         this.ctx.fill();
