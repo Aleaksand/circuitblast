@@ -35,8 +35,17 @@ jobs:
         cp -r www build-temp/
         cp config.xml build-temp/
         cd build-temp
+        
+        echo '{
+          "android": {
+            "release": {
+              "packageType": "apk"
+            }
+          }
+        }' > build.json
+
         cordova platform add android
-        cordova build android --release -- --apk
+        cordova build android --release --buildConfig=build.json
         
         APK_PATH=$(find platforms/android/app/build/outputs/apk/release -name "*-release-unsigned.apk" | head -n 1)
         APK_DIR=$(dirname "$APK_PATH")
