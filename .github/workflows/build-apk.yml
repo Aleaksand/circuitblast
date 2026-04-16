@@ -29,19 +29,24 @@ jobs:
     - name: Install Cordova
       run: npm install -g cordova
     
-    - name: Build and Sign APK
+    - name: Create Cordova Project
       run: |
-        WORKSPACE="${{ github.workspace }}"
-        
         cordova create build-temp com.yourname.circuitblast CircuitBlast
         cp -r www build-temp/
         cp config.xml build-temp/
         echo '{"android": {"release": {"packageType": "apk"}}}' > build-temp/build.json
-        
-        cd build-temp
-        cordova platform add android
-        cordova build android --release --buildConfig="$WORKSPACE/build-temp/build.json"
-        
+    
+    - name: Add Android Platform
+      working-directory: build-temp
+      run: cordova platform add android
+    
+    - name: Build APK
+      working-directory: build-temp
+      run: cordova build android --release --buildConfig=build.json
+    
+    - name: Sign APK
+      working-directory: build-temp
+      run: |
         APK_PATH="platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk"
         
         if [ ! -f "$APK_PATH" ]; then
@@ -57,11 +62,9 @@ jobs:
         
         APK_SIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -r | head -n 1)
         $APK_SIGNER sign --ks "$APK_DIR/my.keystore" --ks-key-alias app --ks-pass pass:password --key-pass pass:password --out "CircuitBlast.apk" "$APK_PATH"
-        
-        echo "FINAL_APK_PATH=$(pwd)/CircuitBlast.apk" >> $GITHUB_ENV
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: CircuitBlast-APK
-        path: ${{ env.FINAL_APK_PATH }}
+        path: build-temp/CircuitBlast.apk
