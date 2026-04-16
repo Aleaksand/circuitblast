@@ -1,0 +1,55 @@
+
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+    
+    - name: Install Cordova
+      run: npm install -g cordova
+    
+    - name: Create Cordova project
+      run: |
+        cordova create build-temp com.yourname.circuitblast CircuitBlast
+        cp -r www build-temp/
+        cp config.xml build-temp/
+    
+    - name: Build Android
+      run: |
+        cd build-temp
+        cordova platform add android
+        cordova build android --release
+    
+    - name: Sign APK
+      run: |
+        cd build-temp/platforms/android/app/build/outputs/apk/release
+        keytool -genkey -v -keystore my.keystore -keyalg RSA -keysize 2048 -validity 10000 -alias app -storepass password -keypass password -dname "CN=Android,O=Android,C=US"
+        jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore my.keystore app-release-unsigned.apk app -storepass password
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: CircuitBlast-APK
+        path: build-temp/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
