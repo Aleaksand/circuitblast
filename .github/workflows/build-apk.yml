@@ -29,31 +29,27 @@ jobs:
     - name: Install Cordova
       run: npm install -g cordova
     
-    - name: Create Cordova project
+    - name: Build and Sign APK
       run: |
         cordova create build-temp com.yourname.circuitblast CircuitBlast
         cp -r www build-temp/
         cp config.xml build-temp/
-    
-    - name: Build Android
-      run: |
         cd build-temp
         cordova platform add android
         cordova build android --release
-    
-    - name: Sign APK
-      run: |
-        APK_PATH=$(find build-temp/platforms/android -name "*-release-unsigned.apk" | head -n 1)
+        
+        APK_PATH=$(find platforms/android/app/build/outputs/apk/release -name "*-release-unsigned.apk" | head -n 1)
         APK_DIR=$(dirname "$APK_PATH")
-        APK_NAME=$(basename "$APK_PATH")
-        cd "$APK_DIR"
-        keytool -genkey -v -keystore my.keystore -keyalg RSA -keysize 2048 -validity 10000 -alias app -storepass password -keypass password -dname "CN=Android,O=Android,C=US"
+        
+        keytool -genkey -v -keystore "$APK_DIR/my.keystore" -keyalg RSA -keysize 2048 -validity 10000 -alias app -storepass password -keypass password -dname "CN=Android,O=Android,C=US"
+        
         APK_SIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -r | head -n 1)
-        $APK_SIGNER sign --ks my.keystore --ks-key-alias app --ks-pass pass:password --key-pass pass:password --out CircuitBlast.apk "$APK_NAME"
-        echo "FINAL_APK_PATH=$(pwd)/CircuitBlast.apk" >> $GITHUB_ENV
+        $APK_SIGNER sign --ks "$APK_DIR/my.keystore" --ks-key-alias app --ks-pass pass:password --key-pass pass:password --out "CircuitBlast.apk" "$APK_PATH"
+        
+        echo "FINAL_APK=$(pwd)/CircuitBlast.apk" >> $GITHUB_ENV
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: CircuitBlast-APK
-        path: ${{ env.FINAL_APK_PATH }}
+        path: ${{ env.FINAL_APK }}
