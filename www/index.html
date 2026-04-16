@@ -15,6 +15,7 @@
             color: white;
             overflow: hidden;
             background: linear-gradient(180deg, #1a1a3e 0%, #2d2d5a 100%);
+            touch-action: manipulation;
         }
         h1 {
             margin: 20px 0;
@@ -35,10 +36,10 @@
         }
         #scoreBoard {
             display: flex;
-            gap: 40px;
+            gap: 25px;
             font-size: 1.1em;
             background: rgba(255, 255, 255, 0.08);
-            padding: 15px 30px;
+            padding: 15px 25px;
             border-radius: 20px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -60,12 +61,16 @@
             font-weight: bold;
             color: #4fc3f7;
         }
+        .score-value.combo {
+            color: #ffd54f;
+        }
         #mainCanvas {
             border-radius: 20px;
             background: rgba(255, 255, 255, 0.05);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             cursor: crosshair;
             transition: all 0.3s;
+            touch-action: none;
         }
         #previewPanel {
             display: flex;
@@ -77,6 +82,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
             transition: all 0.3s;
+            align-items: center;
         }
         .preview-slot {
             width: 70px;
@@ -91,6 +97,9 @@
             background: rgba(0, 0, 0, 0.2);
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
         }
         .preview-slot.has-block:hover {
             transform: scale(1.05);
@@ -159,10 +168,56 @@
             font-size: 20px;
             transition: all 0.3s;
             z-index: 100;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
         }
         #settingsBtn:hover {
             background: rgba(255, 255, 255, 0.2);
             transform: rotate(30deg);
+        }
+        #hammerBtn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #ffd54f, #ff8a65);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(255, 213, 79, 0.4);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #hammerBtn:hover:not(.disabled) {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 213, 79, 0.6);
+        }
+        #hammerBtn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+        }
+        #hammerBtn .ad-label {
+            font-size: 8px;
+            font-weight: bold;
+            color: #1a1a3e;
+            margin-top: -2px;
+            letter-spacing: 0.5px;
+        }
+        #hammerBtn.disabled .ad-label {
+            color: rgba(255, 255, 255, 0.5);
         }
         #settingsModal {
             position: fixed;
@@ -207,6 +262,9 @@
             transition: all 0.3s;
             font-weight: 600;
             width: 100%;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
         }
         .settings-btn.primary {
             background: linear-gradient(135deg, #4fc3f7, #29b6f6);
@@ -338,7 +396,7 @@
             display: none;
             flex-direction: column;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
             pointer-events: none;
         }
         .tutorial-step.active {
@@ -347,19 +405,24 @@
         .tutorial-text {
             background: rgba(79, 195, 247, 0.95);
             color: #1a1a3e;
-            padding: 15px 30px;
-            border-radius: 16px;
-            font-size: 1.2em;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 1em;
             font-weight: bold;
-            white-space: nowrap;
+            text-align: center;
             box-shadow: 0 4px 30px rgba(79, 195, 247, 0.5);
             animation: float 2s ease-in-out infinite;
             pointer-events: auto;
             cursor: pointer;
+            max-width: 90vw;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            white-space: nowrap;
         }
         @keyframes float {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
+            50% { transform: translateY(-6px); }
         }
         #tutorialSkip {
             position: absolute;
@@ -378,6 +441,9 @@
             pointer-events: auto;
             box-shadow: 0 4px 20px rgba(255, 107, 157, 0.4);
             white-space: nowrap;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
         }
         #tutorialSkip:hover {
             background: rgba(255, 107, 157, 1);
@@ -392,11 +458,81 @@
             0%, 100% { box-shadow: 0 0 30px rgba(79, 195, 247, 0.4); }
             50% { box-shadow: 0 0 50px rgba(79, 195, 247, 0.8); }
         }
+        .tutorial-target {
+            position: absolute;
+            border: 3px dashed #ffd54f;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(255, 217, 61, 0.5);
+            animation: target-pulse 1s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes target-pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        .hammer-mode {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23ffd54f"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>') 12 12, auto !important;
+        }
+        .hammer-target {
+            animation: hammer-pulse 0.5s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(255, 213, 79, 0.8) !important;
+        }
+        @keyframes hammer-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        #adModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            backdrop-filter: blur(10px);
+        }
+        #adModal.show {
+            display: flex;
+        }
+        .ad-content {
+            background: linear-gradient(180deg, #2d2d5a 0%, #1a1a3e 100%);
+            border-radius: 24px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            min-width: 280px;
+            max-width: 320px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .ad-content h3 {
+            margin-bottom: 20px;
+            color: #ffd54f;
+            font-size: 1.3em;
+        }
+        .ad-content p {
+            margin-bottom: 30px;
+            opacity: 0.8;
+            line-height: 1.5;
+        }
+        .ad-timer {
+            font-size: 2em;
+            color: #4fc3f7;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <h1>Circuit Blast</h1>
     <div id="settingsBtn" onclick="game.openSettings()">⚙️</div>
+    <div id="hammerBtn" onclick="game.useHammer()" title="Удалить блок (смотреть рекламу)">
+        🔨
+        <span class="ad-label">AD</span>
+    </div>
     <div id="gameContainer">
         <div id="scoreBoard">
             <div class="score-item">
@@ -406,6 +542,10 @@
             <div class="score-item">
                 <span class="score-label">Рекорд</span>
                 <span class="score-value" id="highScore">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Макс Комбо</span>
+                <span class="score-value combo" id="maxCombo">0</span>
             </div>
         </div>
         <canvas id="mainCanvas" width="300" height="300"></canvas>
@@ -430,14 +570,15 @@
     </div>
     <div id="tutorialOverlay">
         <div class="tutorial-step" id="step1">
-            <div class="tutorial-text" onclick="game.nextTutorialStep()">Выбери блок</div>
+            <div class="tutorial-text">Выбери блок</div>
         </div>
         <div class="tutorial-step" id="step2">
-            <div class="tutorial-text" onclick="game.nextTutorialStep()">Нажми ещё раз, чтобы повернуть</div>
+            <div class="tutorial-text">Нажми чтоб повернуть</div>
         </div>
         <div class="tutorial-step" id="step3">
-            <div class="tutorial-text" onclick="game.nextTutorialStep()">Ставь на поле</div>
+            <div class="tutorial-text">Ставь сюда</div>
         </div>
+        <div id="tutorialTarget" class="tutorial-target"></div>
         <button id="tutorialSkip" onclick="game.skipTutorial()">Пропустить обучение</button>
     </div>
     <div id="settingsModal">
@@ -449,6 +590,14 @@
             <div class="settings-label">Для тестирования</div>
             <button class="settings-btn warning" onclick="game.resetTutorial(); game.closeSettings()">📚 Показать обучение</button>
             <button class="settings-btn danger" onclick="game.resetAllData(); game.closeSettings()">🗑️ Сбросить все данные</button>
+        </div>
+    </div>
+    <div id="adModal">
+        <div class="ad-content">
+            <h3>🔨 Реклама</h3>
+            <p>Просмотрите рекламу, чтобы удалить один блок</p>
+            <div class="ad-timer" id="adTimer">5</div>
+            <button class="settings-btn secondary" onclick="game.cancelAd()">Отмена</button>
         </div>
     </div>
     <div id="gameOverScreen">
@@ -557,6 +706,7 @@
                 this.highScore = parseInt(localStorage.getItem('circuitBlastHigh')) || 0;
                 this.loops = 0;
                 this.combo = 1;
+                this.maxCombo = parseInt(localStorage.getItem('circuitBlastMaxCombo')) || 0;
                 this.previewBlocks = [null, null, null];
                 this.selectedSlot = null;
                 this.hoverCell = { x: -1, y: -1 };
@@ -567,15 +717,31 @@
                 this.tutorialStep = 0;
                 this.tutorialActive = false;
                 this.difficultyLevel = 0;
+                this.hammerMode = false;
+                this.hammerUsed = false;
+                
+                this.lastClickTime = 0;
+                this.clickDelay = 300;
+                this.isProcessingClick = false;
+                
                 this.init();
+            }
+            
+            canProcessClick() {
+                const now = Date.now();
+                if (now - this.lastClickTime < this.clickDelay) {
+                    return false;
+                }
+                if (this.isProcessingClick) {
+                    return false;
+                }
+                this.lastClickTime = now;
+                return true;
             }
             
             init() {
                 this.updateScore();
                 this.setupGrid();
-                this.placeInitialBlocks();
-                this.generateNewSet();
-                this.setupEvents();
                 this.checkTutorial();
                 this.animate();
             }
@@ -584,6 +750,10 @@
                 const hasSeenTutorial = localStorage.getItem('circuitBlastTutorial');
                 if (!hasSeenTutorial) {
                     this.startTutorial();
+                } else {
+                    this.placeInitialBlocks();
+                    this.generateNewSet();
+                    this.setupEvents();
                 }
             }
             
@@ -591,7 +761,39 @@
                 this.tutorialActive = true;
                 this.tutorialStep = 1;
                 document.getElementById('tutorialOverlay').classList.add('show');
-                this.updateTutorialStep();
+                this.setupTutorialField();
+                this.setupEvents();
+                // Небольшая задержка для гарантии отрисовки
+                setTimeout(() => this.updateTutorialStep(), 100);
+            }
+            
+            setupTutorialField() {
+                this.setupGrid();
+                
+                const corner1 = new Block('CORNER', 1);
+                this.grid[2][2] = corner1;
+                
+                const corner2 = new Block('CORNER', 2);
+                this.grid[2][3] = corner2;
+                
+                const corner3 = new Block('CORNER', 3);
+                this.grid[3][3] = corner3;
+                
+                const tutorialBlock = new Block('CORNER', 1);
+                this.previewBlocks[0] = tutorialBlock;
+                this.previewBlocks[1] = null;
+                this.previewBlocks[2] = null;
+                
+                this.selectedSlot = null;
+                
+                this.updateSlotClasses();
+                
+                // ФИКС: Принудительная отрисовка с задержкой
+                requestAnimationFrame(() => {
+                    this.renderPreviews();
+                    // Двойная отрисовка для гарантии
+                    setTimeout(() => this.renderPreviews(), 50);
+                });
             }
             
             updateTutorialStep() {
@@ -601,6 +803,7 @@
                 const panel = document.getElementById('previewPanel');
                 const canvas = document.getElementById('mainCanvas');
                 const slots = document.querySelectorAll('.preview-slot');
+                const target = document.getElementById('tutorialTarget');
                 
                 slots.forEach(slot => {
                     slot.classList.remove('tutorial-active', 'disabled');
@@ -608,40 +811,52 @@
                 });
                 canvas.classList.remove('canvas-tutorial');
                 canvas.style.pointerEvents = 'none';
+                target.style.display = 'none';
                 
                 if (this.tutorialStep === 1) {
                     const step1 = document.getElementById('step1');
                     const rect = panel.getBoundingClientRect();
-                    step1.style.top = rect.top - 80 + 'px';
-                    step1.style.left = rect.left + rect.width / 2 + 'px';
+                    step1.style.top = rect.top - 70 + 'px';
+                    step1.style.left = '50%';
                     step1.style.transform = 'translateX(-50%)';
                     
-                    slots.forEach(slot => slot.classList.add('tutorial-active'));
-                    panel.style.pointerEvents = 'auto';
-                    slots.forEach(slot => slot.style.pointerEvents = 'auto');
+                    const slot0 = document.getElementById('slot0');
+                    slot0.classList.add('tutorial-active');
+                    slot0.style.pointerEvents = 'auto';
                 } else if (this.tutorialStep === 2) {
                     const step2 = document.getElementById('step2');
                     const slot0 = document.getElementById('slot0');
                     const rect = slot0.getBoundingClientRect();
-                    step2.style.top = rect.top - 80 + 'px';
-                    step2.style.left = rect.left + rect.width / 2 + 'px';
+                    step2.style.top = rect.top - 70 + 'px';
+                    step2.style.left = '50%';
                     step2.style.transform = 'translateX(-50%)';
                     
                     slots.forEach((slot, index) => {
                         if (index !== 0) slot.classList.add('disabled');
                     });
                     slot0.classList.add('tutorial-active');
+                    slot0.classList.add('selected');
                     slot0.style.pointerEvents = 'auto';
                 } else if (this.tutorialStep === 3) {
                     const step3 = document.getElementById('step3');
-                    const rect = canvas.getBoundingClientRect();
-                    step3.style.top = rect.top - 80 + 'px';
-                    step3.style.left = rect.left + rect.width / 2 + 'px';
+                    const canvasRect = canvas.getBoundingClientRect();
+                    
+                    // Позиционируем над игровым полем (верхняя часть)
+                    step3.style.top = (canvasRect.top + 10) + 'px'; // 10px от верха canvas
+                    step3.style.left = '50%';
                     step3.style.transform = 'translateX(-50%)';
                     
                     slots.forEach(slot => slot.classList.add('disabled'));
                     canvas.classList.add('canvas-tutorial');
                     canvas.style.pointerEvents = 'auto';
+                    
+                    const targetX = 2;
+                    const targetY = 3;
+                    target.style.width = this.cellSize + 'px';
+                    target.style.height = this.cellSize + 'px';
+                    target.style.left = (canvasRect.left + targetX * this.cellSize) + 'px';
+                    target.style.top = (canvasRect.top + targetY * this.cellSize) + 'px';
+                    target.style.display = 'block';
                 }
             }
             
@@ -657,6 +872,7 @@
             endTutorial() {
                 this.tutorialActive = false;
                 document.getElementById('tutorialOverlay').classList.remove('show');
+                document.getElementById('tutorialTarget').style.display = 'none';
                 localStorage.setItem('circuitBlastTutorial', 'true');
                 
                 const slots = document.querySelectorAll('.preview-slot');
@@ -670,6 +886,11 @@
                 canvas.classList.remove('canvas-tutorial');
                 canvas.style.pointerEvents = '';
                 panel.style.pointerEvents = '';
+                
+                this.difficultyLevel = 0;
+                this.setupGrid();
+                this.placeInitialBlocks();
+                this.generateNewSet();
             }
             
             skipTutorial() {
@@ -687,7 +908,9 @@
             resetAllData() {
                 localStorage.removeItem('circuitBlastHigh');
                 localStorage.removeItem('circuitBlastTutorial');
+                localStorage.removeItem('circuitBlastMaxCombo');
                 this.highScore = 0;
+                this.maxCombo = 0;
                 this.newGame();
                 this.updateScore();
             }
@@ -713,7 +936,10 @@
                 }
             }
             
-            openSettings() { document.getElementById('settingsModal').classList.add('show'); }
+            openSettings() { 
+                if (!this.canProcessClick()) return;
+                document.getElementById('settingsModal').classList.add('show'); 
+            }
             closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
             
             setupGrid() {
@@ -751,7 +977,8 @@
                 
                 for (const [type, data] of Object.entries(BLOCK_TYPES)) {
                     if (type === 'EMPTY') continue;
-                    if (data.connectors <= maxConnectors) {
+                    const typeConnectors = data.connectors;
+                    if (typeof typeConnectors === 'number' && typeConnectors <= maxConnectors) {
                         available.push(type);
                     }
                 }
@@ -793,35 +1020,57 @@
             setupEvents() {
                 for (let i = 0; i < 3; i++) {
                     const slot = document.getElementById(`slot${i}`);
-                    slot.addEventListener('click', (e) => { 
-                        e.stopPropagation(); 
-                        this.onSlotClick(i); 
-                    });
+                    slot.replaceWith(slot.cloneNode(true));
+                    const freshSlot = document.getElementById(`slot${i}`);
+                    
+                    freshSlot.addEventListener('pointerdown', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.onSlotClick(i);
+                    }, { passive: false });
                 }
-                this.canvas.addEventListener('mousemove', (e) => this.onCanvasMove(e));
-                this.canvas.addEventListener('mouseleave', () => this.onCanvasLeave());
-                this.canvas.addEventListener('click', (e) => this.onCanvasClick(e));
-                this.canvas.addEventListener('touchmove', (e) => { e.preventDefault(); this.onCanvasMove(e.touches[0]); });
-                this.canvas.addEventListener('touchend', (e) => { e.preventDefault(); this.onCanvasClick(e.changedTouches[0]); });
+                
+                this.canvas.addEventListener('pointermove', (e) => {
+                    e.preventDefault();
+                    this.onCanvasMove(e);
+                }, { passive: false });
+                
+                this.canvas.addEventListener('pointerleave', () => this.onCanvasLeave());
+                
+                this.canvas.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    this.onCanvasClick(e);
+                }, { passive: false });
             }
             
             onSlotClick(slotIndex) {
+                if (!this.canProcessClick()) return;
                 if (this.isGameOver) return;
                 if (this.previewBlocks[slotIndex] === null) return;
                 
+                this.isProcessingClick = true;
+                
                 if (this.tutorialActive) {
-                    if (this.tutorialStep === 1) {
+                    if (this.tutorialStep === 1 && slotIndex === 0) {
                         this.selectedSlot = slotIndex;
                         this.updateSlotClasses();
                         this.renderPreviews();
                         this.nextTutorialStep();
+                        this.isProcessingClick = false;
                         return;
                     } else if (this.tutorialStep === 2 && slotIndex === 0) {
                         this.previewBlocks[slotIndex].rotate();
                         this.renderPreviews();
-                        this.nextTutorialStep();
+                        
+                        const block = this.previewBlocks[slotIndex];
+                        if (block.connectors[0] === 1 && block.connectors[1] === 1 && 
+                            block.connectors[2] === 0 && block.connectors[3] === 0) {
+                            this.nextTutorialStep();
+                        }
+                        this.isProcessingClick = false;
                         return;
                     }
+                    this.isProcessingClick = false;
                     return;
                 }
                 
@@ -830,35 +1079,71 @@
                 } else {
                     this.selectedSlot = slotIndex;
                 }
+                
                 this.updateSlotClasses();
                 this.renderPreviews();
+                
+                setTimeout(() => {
+                    this.isProcessingClick = false;
+                }, 50);
             }
             
             onCanvasMove(e) {
                 if (this.isGameOver) return;
-                if (this.selectedSlot === null) return;
+                
                 const rect = this.canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 const gridX = Math.floor(x / this.cellSize);
                 const gridY = Math.floor(y / this.cellSize);
+                
                 if (gridX >= 0 && gridX < this.gridSize && gridY >= 0 && gridY < this.gridSize) {
                     this.hoverCell = { x: gridX, y: gridY };
+                    
+                    if (this.hammerMode && this.grid[gridY][gridX]) {
+                        this.canvas.classList.add('hammer-target');
+                    } else {
+                        this.canvas.classList.remove('hammer-target');
+                    }
                 } else {
                     this.hoverCell = { x: -1, y: -1 };
+                    this.canvas.classList.remove('hammer-target');
                 }
             }
             
-            onCanvasLeave() { this.hoverCell = { x: -1, y: -1 }; }
+            onCanvasLeave() { 
+                this.hoverCell = { x: -1, y: -1 }; 
+                this.canvas.classList.remove('hammer-target');
+            }
             
             onCanvasClick(e) {
+                if (!this.canProcessClick()) return;
                 if (this.isGameOver) return;
-                if (this.selectedSlot === null) return;
+                
                 const rect = this.canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 const gridX = Math.floor(x / this.cellSize);
                 const gridY = Math.floor(y / this.cellSize);
+                
+                if (this.hammerMode) {
+                    if (gridX >= 0 && gridX < this.gridSize && gridY >= 0 && gridY < this.gridSize) {
+                        if (this.grid[gridY][gridX]) {
+                            this.removeBlock(gridX, gridY);
+                        }
+                    }
+                    return;
+                }
+                
+                if (this.selectedSlot === null) return;
+                
+                if (this.tutorialActive && this.tutorialStep === 3) {
+                    if (gridX === 2 && gridY === 3 && !this.grid[gridY][gridX]) {
+                        this.placeBlock(gridX, gridY, this.selectedSlot);
+                    }
+                    return;
+                }
+                
                 if (gridX >= 0 && gridX < this.gridSize && gridY >= 0 && gridY < this.gridSize && !this.grid[gridY][gridX]) {
                     this.placeBlock(gridX, gridY, this.selectedSlot);
                 }
@@ -871,12 +1156,29 @@
                 this.selectedSlot = null;
                 
                 if (this.tutorialActive && this.tutorialStep === 3) {
-                    this.nextTutorialStep();
+                    const loops = this.findLoops();
+                    if (loops.length > 0) {
+                        this.combo = loops.length;
+                        this.assignGlowColors(loops);
+                        this.showComboPopup(loops);
+                        this.clearLoops(loops);
+                        setTimeout(() => {
+                            this.nextTutorialStep();
+                        }, 1500);
+                    }
+                    return;
                 }
                 
                 const loops = this.findLoops();
                 if (loops.length > 0) {
-                    this.combo = loops.length;
+                    const maxLoopSize = Math.max(...loops.map(loop => loop.size));
+                    this.combo = maxLoopSize;
+                    
+                    if (this.combo > this.maxCombo) {
+                        this.maxCombo = this.combo;
+                        localStorage.setItem('circuitBlastMaxCombo', this.maxCombo);
+                    }
+                    
                     this.assignGlowColors(loops);
                     this.showComboPopup(loops);
                     this.clearLoops(loops);
@@ -898,9 +1200,57 @@
             }
             
             increaseDifficulty() {
-                if (this.difficultyLevel < 2) {
-                    this.difficultyLevel++;
+                if (this.loops >= 5 && this.difficultyLevel < 2) {
+                    this.difficultyLevel = 2;
+                } else if (this.loops >= 2 && this.difficultyLevel < 1) {
+                    this.difficultyLevel = 1;
                 }
+            }
+            
+            useHammer() {
+                if (!this.canProcessClick()) return;
+                if (this.hammerUsed || this.isGameOver || this.tutorialActive) return;
+                
+                document.getElementById('adModal').classList.add('show');
+                let timer = 5;
+                const timerEl = document.getElementById('adTimer');
+                timerEl.textContent = timer;
+                
+                this.adInterval = setInterval(() => {
+                    timer--;
+                    timerEl.textContent = timer;
+                    if (timer <= 0) {
+                        clearInterval(this.adInterval);
+                        document.getElementById('adModal').classList.remove('show');
+                        this.activateHammer();
+                    }
+                }, 1000);
+            }
+            
+            cancelAd() {
+                if (this.adInterval) {
+                    clearInterval(this.adInterval);
+                    this.adInterval = null;
+                }
+                document.getElementById('adModal').classList.remove('show');
+            }
+            
+            activateHammer() {
+                this.hammerMode = true;
+                this.hammerUsed = true;
+                document.getElementById('hammerBtn').classList.add('disabled');
+                this.canvas.classList.add('hammer-mode');
+                this.selectedSlot = null;
+                this.updateSlotClasses();
+            }
+            
+            removeBlock(x, y) {
+                this.createExplosion(x, y, '#ffd54f');
+                this.grid[y][x] = null;
+                
+                this.hammerMode = false;
+                this.canvas.classList.remove('hammer-mode');
+                this.canvas.classList.remove('hammer-target');
             }
             
             showComboPopup(loops) {
@@ -1271,10 +1621,19 @@
                     this.ctx.stroke();
                 }
                 
-                if (this.selectedSlot !== null && this.hoverCell.x >= 0) {
+                if (this.hoverCell.x >= 0) {
                     const hx = this.hoverCell.x * this.cellSize;
                     const hy = this.hoverCell.y * this.cellSize;
-                    if (!this.grid[this.hoverCell.y][this.hoverCell.x]) {
+                    
+                    if (this.hammerMode) {
+                        if (this.grid[this.hoverCell.y][this.hoverCell.x]) {
+                            this.ctx.fillStyle = 'rgba(255, 213, 79, 0.3)';
+                            this.ctx.fillRect(hx, hy, this.cellSize, this.cellSize);
+                            this.ctx.strokeStyle = '#ffd54f';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.strokeRect(hx, hy, this.cellSize, this.cellSize);
+                        }
+                    } else if (this.selectedSlot !== null && !this.grid[this.hoverCell.y][this.hoverCell.x]) {
                         this.ctx.fillStyle = 'rgba(79, 195, 247, 0.2)';
                         this.ctx.fillRect(hx, hy, this.cellSize, this.cellSize);
                         const ghostBlock = this.previewBlocks[this.selectedSlot];
@@ -1283,7 +1642,7 @@
                             this.drawBlock(this.ctx, ghostBlock, hx, hy, this.cellSize, false, true);
                             this.ctx.globalAlpha = 1;
                         }
-                    } else {
+                    } else if (this.grid[this.hoverCell.y][this.hoverCell.x]) {
                         this.ctx.fillStyle = 'rgba(255, 107, 157, 0.2)';
                         this.ctx.fillRect(hx, hy, this.cellSize, this.cellSize);
                     }
@@ -1328,6 +1687,7 @@
             updateScore() {
                 document.getElementById('score').textContent = this.score;
                 document.getElementById('highScore').textContent = this.highScore;
+                document.getElementById('maxCombo').textContent = this.maxCombo;
                 if (this.score > this.highScore) {
                     this.highScore = this.score;
                     localStorage.setItem('circuitBlastHigh', this.highScore);
@@ -1354,6 +1714,10 @@
                 this.lastLoopCells.clear();
                 this.chainGlowColors.clear();
                 this.particles = [];
+                this.hammerMode = false;
+                this.hammerUsed = false;
+                this.canvas.classList.remove('hammer-mode', 'hammer-target');
+                document.getElementById('hammerBtn').classList.remove('disabled');
                 document.getElementById('gameOverScreen').classList.remove('show');
                 this.setupGrid();
                 this.placeInitialBlocks();
