@@ -34,7 +34,6 @@ jobs:
         cordova create build-temp com.yourname.circuitblast CircuitBlast
         cp -r www build-temp/
         cp config.xml build-temp/
-        echo '{"android": {"release": {"packageType": "apk"}}}' > build-temp/build.json
     
     - name: Add Android Platform
       working-directory: build-temp
@@ -42,7 +41,7 @@ jobs:
     
     - name: Build APK
       working-directory: build-temp
-      run: cordova build android --release --buildConfig=build.json
+      run: cordova build android --release -- --packageType=apk
     
     - name: Sign APK
       working-directory: build-temp
