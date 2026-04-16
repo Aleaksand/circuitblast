@@ -31,21 +31,24 @@ jobs:
     
     - name: Build and Sign APK
       run: |
-        # 1. Создаем конфиг в корневой директории
         echo '{"android": {"release": {"packageType": "apk"}}}' > ${{ github.workspace }}/build.json
         
-        # 2. Создаем проект
         cordova create build-temp com.yourname.circuitblast CircuitBlast
         cp -r www build-temp/
         cp config.xml build-temp/
         
-        # 3. Собираем, указывая абсолютный путь к конфигу
         cd build-temp
         cordova platform add android
         cordova build android --release --buildConfig=${{ github.workspace }}/build.json
         
-        # 4. Поиск и подпись
+        # Поиск APK внутри текущей папки build-temp
         APK_PATH=$(find platforms/android/app/build/outputs/apk/release -name "*-release-unsigned.apk" | head -n 1)
+        
+        if [ -z "$APK_PATH" ]; then
+          echo "APK не найден!"
+          exit 1
+        fi
+        
         APK_DIR=$(dirname "$APK_PATH")
         
         keytool -genkey -v -keystore "$APK_DIR/my.keystore" -keyalg RSA -keysize 2048 -validity 10000 -alias app -storepass password -keypass password -dname "CN=Android,O=Android,C=US"
