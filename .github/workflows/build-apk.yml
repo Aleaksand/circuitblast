@@ -36,13 +36,7 @@ jobs:
         cp config.xml build-temp/
         cd build-temp
         
-        echo '{
-          "android": {
-            "release": {
-              "packageType": "apk"
-            }
-          }
-        }' > build.json
+        printf '{\n  "android": {\n    "release": {\n      "packageType": "apk"\n    }\n  }\n}\n' > build.json
 
         cordova platform add android
         cordova build android --release --buildConfig=build.json
