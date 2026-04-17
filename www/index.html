@@ -651,12 +651,14 @@
             '#7c4dff'
         ];
         
+        // ИСПРАВЛЕНО: убрано дублирование ключа connectors у CROSS
+        // Добавлено отдельное поле connectorCount для правильной проверки
         const BLOCK_TYPES = {
-            EMPTY: { connectors: [0,0,0,0], color: '#2c3e50' },
-            STRAIGHT: { connectors: 2, variants: [{ connectors: [1,0,1,0] },{ connectors: [0,1,0,1] }] },
-            CORNER: { connectors: 2, variants: [{ connectors: [1,1,0,0] },{ connectors: [0,1,1,0] },{ connectors: [0,0,1,1] },{ connectors: [1,0,0,1] }] },
-            T_SHAPE: { connectors: 3, variants: [{ connectors: [1,1,1,0] },{ connectors: [0,1,1,1] },{ connectors: [1,0,1,1] },{ connectors: [1,1,0,1] }] },
-            CROSS: { connectors: 4, connectors: [1,1,1,1] }
+            EMPTY: { connectorCount: 0, connectors: [0,0,0,0], color: '#2c3e50' },
+            STRAIGHT: { connectorCount: 2, connectors: 2, variants: [{ connectors: [1,0,1,0] },{ connectors: [0,1,0,1] }] },
+            CORNER: { connectorCount: 2, connectors: 2, variants: [{ connectors: [1,1,0,0] },{ connectors: [0,1,1,0] },{ connectors: [0,0,1,1] },{ connectors: [1,0,0,1] }] },
+            T_SHAPE: { connectorCount: 3, connectors: 3, variants: [{ connectors: [1,1,1,0] },{ connectors: [0,1,1,1] },{ connectors: [1,0,1,1] },{ connectors: [1,1,0,1] }] },
+            CROSS: { connectorCount: 4, connectors: [1,1,1,1] }
         };
         
         const DIFFICULTY_LEVELS = {
@@ -768,6 +770,8 @@
             }
             
             setupTutorialField() {
+                // ИСПРАВЛЕНО: сброс сложности при обучении
+                this.difficultyLevel = 0;
                 this.setupGrid();
                 
                 const corner1 = new Block('CORNER', 1);
@@ -971,13 +975,15 @@
                 }
             }
             
+            // ИСПРАВЛЕНО: теперь использует connectorCount вместо перезаписанного connectors
             getAvailableBlockTypes() {
                 const maxConnectors = DIFFICULTY_LEVELS[this.difficultyLevel].maxConnectors;
                 const available = [];
                 
                 for (const [type, data] of Object.entries(BLOCK_TYPES)) {
                     if (type === 'EMPTY') continue;
-                    const typeConnectors = data.connectors;
+                    // Используем connectorCount вместо connectors
+                    const typeConnectors = data.connectorCount;
                     if (typeof typeConnectors === 'number' && typeConnectors <= maxConnectors) {
                         available.push(type);
                     }
@@ -1181,8 +1187,9 @@
                     
                     this.assignGlowColors(loops);
                     this.showComboPopup(loops);
-                    this.clearLoops(loops);
-                    this.increaseDifficulty();
+                    // ИСПРАВЛЕНО: передаём количество петель для повышения сложности
+                    this.clearLoops(loops, loops.length);
+                    this.increaseDifficulty(loops.length);
                 } else {
                     this.combo = 1;
                 }
@@ -1199,10 +1206,14 @@
                 this.updateScore();
             }
             
-            increaseDifficulty() {
-                if (this.loops >= 5 && this.difficultyLevel < 2) {
+            // ИСПРАВЛЕНО: теперь принимает количество петлей за ход, а не общее число
+            // Сложность повышается быстрее при больших комбо
+            increaseDifficulty(chainsCleared) {
+                // Повышаем сложность в зависимости от количества петлей за один ход
+                // и накопленного общего счёта петель
+                if (this.difficultyLevel < 2 && (chainsCleared >= 3 || this.loops >= 10)) {
                     this.difficultyLevel = 2;
-                } else if (this.loops >= 2 && this.difficultyLevel < 1) {
+                } else if (this.difficultyLevel < 1 && (chainsCleared >= 2 || this.loops >= 3)) {
                     this.difficultyLevel = 1;
                 }
             }
@@ -1384,7 +1395,7 @@
                 });
             }
             
-            clearLoops(loops) {
+            clearLoops(loops, chainsCleared = 1) {
                 let totalCells = 0;
                 this.lastLoopCells.clear();
                 loops.forEach(loop => {
@@ -1400,7 +1411,7 @@
                 const sizeBonus = loops.reduce((sum, loop) => sum + loop.size, 0);
                 const points = sizeBonus * sizeBonus * 10 * this.combo;
                 this.score += points;
-                this.loops += loops.length;
+                this.loops += chainsCleared;
                 this.updateScore();
                 setTimeout(() => {
                     this.lastLoopCells.clear();
@@ -1707,6 +1718,7 @@
                 this.score = 0;
                 this.loops = 0;
                 this.combo = 1;
+                // ИСПРАВЛЕНО: сброс сложности при новой игре
                 this.difficultyLevel = 0;
                 this.previewBlocks = [null, null, null];
                 this.selectedSlot = null;
