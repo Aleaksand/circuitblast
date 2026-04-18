@@ -2,10 +2,14 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Circuit Blast</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <title>Loopix</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
         body {
             min-height: 100vh;
             display: flex;
@@ -16,6 +20,12 @@
             overflow: hidden;
             background: linear-gradient(180deg, #1a1a3e 0%, #2d2d5a 100%);
             touch-action: manipulation;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
         }
         h1 {
             margin: 20px 0;
@@ -33,6 +43,28 @@
             width: 100%;
             max-width: 400px;
             padding: 0 20px;
+            transition: transform 0.05s ease-out;
+        }
+        #gameWrapper {
+            position: relative;
+            display: inline-block;
+        }
+        #darkOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            border-radius: 20px;
+            z-index: 10;
+        }
+        #darkOverlay.active {
+            opacity: 0.5;
+            pointer-events: none;
         }
         #scoreBoard {
             display: flex;
@@ -71,6 +103,8 @@
             cursor: crosshair;
             transition: all 0.3s;
             touch-action: none;
+            position: relative;
+            z-index: 1;
         }
         #previewPanel {
             display: flex;
@@ -87,7 +121,7 @@
         .preview-slot {
             width: 70px;
             height: 70px;
-            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 15px;
             display: flex;
             align-items: center;
@@ -97,7 +131,7 @@
             background: rgba(0, 0, 0, 0.2);
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
+            touch-action: none;
             user-select: none;
             -webkit-user-select: none;
         }
@@ -113,7 +147,6 @@
         }
         .preview-slot.empty {
             opacity: 0.3;
-            border-style: dotted;
             cursor: default;
         }
         .preview-slot.disabled {
@@ -149,13 +182,18 @@
             transition: opacity 0.3s;
             background: rgba(255, 255, 255, 0.3);
         }
-        .preview-slot.selected .rotate-indicator {
+        .preview-slot.selected .rotate-indicator,
+        .preview-slot.dragging .rotate-indicator {
             opacity: 1;
+        }
+        .preview-slot.dragging {
+            border-color: #4fc3f7;
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.4);
         }
         #settingsBtn {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: max(20px, env(safe-area-inset-top, 20px));
+            right: max(20px, env(safe-area-inset-right, 20px));
             width: 44px;
             height: 44px;
             background: rgba(255, 255, 255, 0.1);
@@ -178,8 +216,8 @@
         }
         #hammerBtn {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: max(20px, env(safe-area-inset-top, 20px));
+            left: max(20px, env(safe-area-inset-left, 20px));
             width: 44px;
             height: 44px;
             background: linear-gradient(135deg, #ffd54f, #ff8a65);
@@ -219,6 +257,27 @@
         #hammerBtn.disabled .ad-label {
             color: rgba(255, 255, 255, 0.5);
         }
+        #hammerIndicator {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 213, 79, 0.9);
+            color: #1a1a3e;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            pointer-events: none;
+            z-index: 150;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(255, 213, 79, 0.4);
+        }
+        #hammerIndicator.show {
+            opacity: 1;
+        }
         #settingsModal {
             position: fixed;
             top: 0;
@@ -238,27 +297,124 @@
         .settings-content {
             background: linear-gradient(180deg, #2d2d5a 0%, #1a1a3e 100%);
             border-radius: 24px;
-            padding: 40px 30px;
+            padding: 30px;
             text-align: center;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            min-width: 280px;
-            max-width: 320px;
+            min-width: 300px;
+            max-width: 350px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
         }
         .settings-content h2 {
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             color: white;
             font-size: 1.5em;
             font-weight: 600;
         }
+        .settings-section {
+            margin-bottom: 25px;
+            text-align: left;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 15px;
+        }
+        .settings-section h3 {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1em;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        .setting-label {
+            color: white;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .volume-slider {
+            width: 120px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4fc3f7;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+        }
+        .volume-value {
+            min-width: 45px;
+            text-align: right;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9em;
+        }
+        .toggle-switch {
+            width: 48px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .toggle-switch.active {
+            background: #4fc3f7;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .toggle-switch.active::after {
+            transform: translateX(22px);
+        }
+        .settings-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
         .settings-btn {
             border: none;
             color: white;
-            padding: 16px 32px;
-            font-size: 1em;
-            border-radius: 16px;
+            padding: 14px 20px;
+            font-size: 0.95em;
+            border-radius: 12px;
             cursor: pointer;
-            margin: 8px 0;
             transition: all 0.3s;
             font-weight: 600;
             width: 100%;
@@ -268,47 +424,45 @@
         }
         .settings-btn.primary {
             background: linear-gradient(135deg, #4fc3f7, #29b6f6);
-            box-shadow: 0 4px 15px rgba(79, 195, 247, 0.4);
+            box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
         }
         .settings-btn.primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(79, 195, 247, 0.5);
+            box-shadow: 0 6px 20px rgba(79, 195, 247, 0.4);
         }
         .settings-btn.secondary {
             background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
         .settings-btn.secondary:hover {
             background: rgba(255, 255, 255, 0.15);
         }
         .settings-btn.danger {
             background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
-            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
         }
         .settings-btn.danger:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
         }
         .settings-btn.warning {
             background: linear-gradient(135deg, #ffd93d, #f9ad3e);
-            box-shadow: 0 4px 15px rgba(255, 217, 61, 0.4);
+            box-shadow: 0 4px 15px rgba(255, 217, 61, 0.3);
             color: #1a1a3e;
         }
         .settings-btn.warning:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 217, 61, 0.5);
+            box-shadow: 0 6px 20px rgba(255, 217, 61, 0.4);
         }
         .settings-divider {
             height: 1px;
             background: rgba(255, 255, 255, 0.1);
-            margin: 20px 0;
+            margin: 15px 0;
         }
-        .settings-label {
+        .settings-footer {
+            margin-top: 15px;
             font-size: 0.8em;
-            opacity: 0.6;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            opacity: 0.5;
         }
         #gameOverScreen {
             position: fixed;
@@ -352,6 +506,7 @@
             pointer-events: none;
             z-index: 500;
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
         }
         #comboPopup.show {
             transform: translate(-50%, -50%) scale(1);
@@ -362,21 +517,18 @@
             transition: transform 0.3s ease-in, opacity 0.2s ease-in;
         }
         .combo-text {
-            font-size: 2.5em;
+            font-size: 3.5em;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 3px;
-            text-shadow: 0 0 30px currentColor;
-            animation: pulse 0.5s ease-in-out;
+            letter-spacing: 4px;
+            filter: drop-shadow(0 0 20px rgba(0, 0, 0, 0.8));
         }
         .combo-count {
-            font-size: 1.5em;
+            font-size: 1.8em;
             margin-top: 10px;
             opacity: 0.9;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            font-weight: bold;
+            filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.8));
         }
         #tutorialOverlay {
             position: fixed;
@@ -445,11 +597,6 @@
             user-select: none;
             -webkit-user-select: none;
         }
-        #tutorialSkip:hover {
-            background: rgba(255, 107, 157, 1);
-            transform: translateX(-50%) scale(1.05);
-            box-shadow: 0 6px 25px rgba(255, 107, 157, 0.6);
-        }
         .canvas-tutorial {
             animation: canvas-pulse 1.5s ease-in-out infinite;
             cursor: pointer !important;
@@ -471,7 +618,7 @@
             50% { opacity: 1; transform: scale(1.05); }
         }
         .hammer-mode {
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23ffd54f"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>') 12 12, auto !important;
+            cursor: crosshair !important;
         }
         .hammer-target {
             animation: hammer-pulse 0.5s ease-in-out infinite;
@@ -524,15 +671,24 @@
             margin-bottom: 20px;
             font-weight: bold;
         }
+        .slow-motion-active {
+            animation: slowMotionPulse 0.5s ease-out;
+        }
+        @keyframes slowMotionPulse {
+            0% { box-shadow: 0 0 0 rgba(79, 195, 247, 0); }
+            50% { box-shadow: 0 0 50px rgba(79, 195, 247, 0.5); }
+            100% { box-shadow: 0 0 0 rgba(79, 195, 247, 0); }
+        }
     </style>
 </head>
 <body>
-    <h1>Circuit Blast</h1>
+    <h1>Loopix</h1>
     <div id="settingsBtn" onclick="game.openSettings()">⚙️</div>
     <div id="hammerBtn" onclick="game.useHammer()" title="Удалить блок (смотреть рекламу)">
         🔨
         <span class="ad-label">AD</span>
     </div>
+    <div id="hammerIndicator">🔨 Выбери блок для удаления</div>
     <div id="gameContainer">
         <div id="scoreBoard">
             <div class="score-item">
@@ -548,7 +704,10 @@
                 <span class="score-value combo" id="maxCombo">0</span>
             </div>
         </div>
-        <canvas id="mainCanvas" width="300" height="300"></canvas>
+        <div id="gameWrapper">
+            <canvas id="mainCanvas" width="300" height="300"></canvas>
+            <div id="darkOverlay"></div>
+        </div>
         <div id="previewPanel">
             <div class="preview-slot has-block" id="slot0" data-index="0">
                 <canvas id="preview0" width="50" height="50"></canvas>
@@ -573,7 +732,7 @@
             <div class="tutorial-text">Выбери блок</div>
         </div>
         <div class="tutorial-step" id="step2">
-            <div class="tutorial-text">Нажми чтоб повернуть</div>
+            <div class="tutorial-text">Зажми и тяни чтобы повернуть</div>
         </div>
         <div class="tutorial-step" id="step3">
             <div class="tutorial-text">Ставь сюда</div>
@@ -584,12 +743,47 @@
     <div id="settingsModal">
         <div class="settings-content">
             <h2>⚙️ Настройки</h2>
-            <button class="settings-btn primary" onclick="game.newGame(); game.closeSettings()">🔄 Начать заново</button>
-            <button class="settings-btn secondary" onclick="game.closeSettings()">✕ Закрыть</button>
+            
+            <div class="settings-section">
+                <h3>🔊 Звук</h3>
+                <div class="setting-item">
+                    <span class="setting-label">Включить звук</span>
+                    <div class="setting-control">
+                        <div class="toggle-switch active" id="soundToggle" onclick="game.toggleSound()"></div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Громкость</span>
+                    <div class="setting-control">
+                        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" oninput="game.setVolume(this.value)">
+                        <span class="volume-value" id="volumeValue">70%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h3>📳 Вибрация</h3>
+                <div class="setting-item">
+                    <span class="setting-label">Включить вибрацию</span>
+                    <div class="setting-control">
+                        <div class="toggle-switch active" id="vibrationToggle" onclick="game.toggleVibration()"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-actions">
+                <button class="settings-btn primary" onclick="game.newGame(); game.closeSettings()">🔄 Начать заново</button>
+                <button class="settings-btn secondary" onclick="game.closeSettings()">✕ Закрыть</button>
+            </div>
+            
             <div class="settings-divider"></div>
-            <div class="settings-label">Для тестирования</div>
-            <button class="settings-btn warning" onclick="game.resetTutorial(); game.closeSettings()">📚 Показать обучение</button>
-            <button class="settings-btn danger" onclick="game.resetAllData(); game.closeSettings()">🗑️ Сбросить все данные</button>
+            
+            <div class="settings-actions">
+                <button class="settings-btn warning" onclick="game.resetTutorial(); game.closeSettings()">📚 Показать обучение</button>
+                <button class="settings-btn danger" onclick="game.resetAllData(); game.closeSettings()">🗑️ Сбросить все данные</button>
+            </div>
+            
+            <div class="settings-footer">Loopix v2.0</div>
         </div>
     </div>
     <div id="adModal">
@@ -607,6 +801,273 @@
         <button class="settings-btn primary" onclick="game.newGame()">🔄 Начать заново</button>
     </div>
     <script>
+        // Блокировка поворота экрана
+        (function() {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('portrait').catch(() => {});
+            }
+        })();
+        
+        // Аудио менеджер с приятными звуками
+        class AudioManager {
+            constructor() {
+                this.context = null;
+                this.enabled = localStorage.getItem('loopixSound') !== 'false';
+                this.volume = parseFloat(localStorage.getItem('loopixVolume') || '0.6');
+                this.initialized = false;
+                
+                if (this.enabled) {
+                    this.init();
+                }
+                
+                this.updateUI();
+            }
+            
+            init() {
+                try {
+                    this.context = new (window.AudioContext || window.webkitAudioContext)();
+                    this.initialized = true;
+                } catch (e) {
+                    console.log('Audio not supported');
+                }
+            }
+            
+            async ensureContext() {
+                if (!this.enabled) return false;
+                if (!this.context) {
+                    this.init();
+                }
+                if (this.context && this.context.state === 'suspended') {
+                    await this.context.resume();
+                }
+                return this.context && this.context.state === 'running';
+            }
+            
+            // Приятные звуки для всех блоков
+            playPlace(blockType = 'STRAIGHT') {
+                if (!this.enabled) return;
+                this.ensureContext().then(running => {
+                    if (!running) return;
+                    
+                    const now = this.context.currentTime;
+                    
+                    // Основной тон - мягкий и приятный
+                    const osc1 = this.context.createOscillator();
+                    const osc2 = this.context.createOscillator();
+                    const gain = this.context.createGain();
+                    const filter = this.context.createBiquadFilter();
+                    
+                    // Настройки для разных блоков - все с мягкими частотами
+                    const sounds = {
+                        'STRAIGHT': { freq1: 440, freq2: 550, duration: 0.1 },  // A4 и C#5 - приятное созвучие
+                        'CORNER': { freq1: 523, freq2: 659, duration: 0.12 },    // C5 и E5 - мажорная терция
+                        'T_SHAPE': { freq1: 587, freq2: 698, duration: 0.11 },   // D5 и F5 - мягкая минорная терция
+                        'CROSS': { freq1: 659, freq2: 783, duration: 0.1 }       // E5 и G5 - приятное созвучие
+                    };
+                    
+                    const sound = sounds[blockType] || sounds['STRAIGHT'];
+                    
+                    // Фильтр для смягчения звука
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 2000;
+                    filter.Q.value = 0.5;
+                    
+                    // Мягкие синусоиды
+                    osc1.type = 'sine';
+                    osc2.type = 'sine';
+                    osc1.frequency.value = sound.freq1;
+                    osc2.frequency.value = sound.freq2;
+                    
+                    // Плавная огибающая
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(this.volume * 0.15, now + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + sound.duration);
+                    
+                    osc1.connect(filter);
+                    osc2.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.context.destination);
+                    
+                    osc1.start(now);
+                    osc2.start(now);
+                    osc1.stop(now + sound.duration);
+                    osc2.stop(now + sound.duration);
+                });
+            }
+            
+            playRotate() {
+                if (!this.enabled) return;
+                this.ensureContext().then(running => {
+                    if (!running) return;
+                    
+                    const now = this.context.currentTime;
+                    const osc = this.context.createOscillator();
+                    const gain = this.context.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.value = 880; // A5 - приятный высокий тон
+                    
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(this.volume * 0.1, now + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.context.destination);
+                    
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                });
+            }
+            
+            playCombo(size) {
+                if (!this.enabled) return;
+                this.ensureContext().then(running => {
+                    if (!running) return;
+                    
+                    const now = this.context.currentTime;
+                    
+                    // Приятные аккорды для комбо
+                    const chordNotes = size >= 10 ? [523.25, 659.25, 783.99, 1046.50] : // C E G C
+                                      size >= 7 ? [523.25, 659.25, 783.99] :            // C E G
+                                      size >= 5 ? [523.25, 659.25] :                     // C E
+                                      [523.25];                                          // C
+                    
+                    chordNotes.forEach((freq, i) => {
+                        const osc = this.context.createOscillator();
+                        const gain = this.context.createGain();
+                        const filter = this.context.createBiquadFilter();
+                        
+                        filter.type = 'lowpass';
+                        filter.frequency.value = 1500;
+                        
+                        osc.type = i === 0 ? 'sine' : 'triangle';
+                        osc.frequency.value = freq;
+                        
+                        const startTime = now + i * 0.05;
+                        gain.gain.setValueAtTime(0, startTime);
+                        gain.gain.linearRampToValueAtTime(this.volume * 0.2, startTime + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
+                        
+                        osc.connect(filter);
+                        filter.connect(gain);
+                        gain.connect(this.context.destination);
+                        
+                        osc.start(startTime);
+                        osc.stop(startTime + 0.3);
+                    });
+                });
+            }
+            
+            playClear() {
+                if (!this.enabled) return;
+                this.ensureContext().then(running => {
+                    if (!running) return;
+                    
+                    const now = this.context.currentTime;
+                    const osc = this.context.createOscillator();
+                    const gain = this.context.createGain();
+                    const filter = this.context.createBiquadFilter();
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 1000;
+                    
+                    osc.type = 'sine';
+                    osc.frequency.value = 330; // E4
+                    
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(this.volume * 0.15, now + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                    
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.context.destination);
+                    
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                });
+            }
+            
+            toggle() {
+                this.enabled = !this.enabled;
+                localStorage.setItem('loopixSound', this.enabled);
+                this.updateUI();
+                
+                if (this.enabled && !this.initialized) {
+                    this.init();
+                }
+            }
+            
+            setVolume(value) {
+                this.volume = value / 100;
+                localStorage.setItem('loopixVolume', this.volume);
+                document.getElementById('volumeValue').textContent = value + '%';
+            }
+            
+            updateUI() {
+                const toggle = document.getElementById('soundToggle');
+                const slider = document.getElementById('volumeSlider');
+                
+                if (this.enabled) {
+                    toggle.classList.add('active');
+                    slider.disabled = false;
+                } else {
+                    toggle.classList.remove('active');
+                    slider.disabled = true;
+                }
+                
+                const volumePercent = Math.round(this.volume * 100);
+                slider.value = volumePercent;
+                document.getElementById('volumeValue').textContent = volumePercent + '%';
+            }
+        }
+        
+        // Вибрация
+        class VibrationManager {
+            constructor() {
+                this.enabled = localStorage.getItem('loopixVibration') !== 'false';
+                this.updateUI();
+            }
+            
+            vibrate(pattern) {
+                if (!this.enabled) return;
+                if (typeof navigator.vibrate === 'function') {
+                    navigator.vibrate(pattern);
+                }
+            }
+            
+            comboVibration(size) {
+                if (!this.enabled) return;
+                const pattern = size >= 10 ? [50, 40, 50, 40, 100] :
+                               size >= 7 ? [40, 30, 60, 30, 80] :
+                               size >= 5 ? [30, 30, 50] :
+                               [20, 20, 40];
+                this.vibrate(pattern);
+            }
+            
+            lightVibration() {
+                if (!this.enabled) return;
+                this.vibrate(10);
+            }
+            
+            toggle() {
+                this.enabled = !this.enabled;
+                localStorage.setItem('loopixVibration', this.enabled);
+                this.updateUI();
+            }
+            
+            updateUI() {
+                const toggle = document.getElementById('vibrationToggle');
+                if (this.enabled) {
+                    toggle.classList.add('active');
+                } else {
+                    toggle.classList.remove('active');
+                }
+            }
+        }
+        
+        const audioManager = new AudioManager();
+        const vibrationManager = new VibrationManager();
+        
         const COLORS = {
             blocks: {
                 STRAIGHT: '#4fc3f7',
@@ -624,35 +1085,16 @@
         };
         
         const COMBO_PHRASES = [
-            'КРУТО!',
-            'ОТЛИЧНО!',
-            'СУПЕР!',
-            'ВАУ!',
-            'БОМБА!',
-            'КЛАСС!',
-            'МОЛОДЕЦ!',
-            'ИМБА!',
-            'ОГОНЬ!',
-            'ТОП!',
-            'ПЕРФЕКТО!',
-            'ГЕНИАЛЬНО!',
-            'ШИКАРНО!',
-            'ЗВЕРСКИ!',
-            'ЛЕГЕНДАРНО!'
+            'КРУТО!', 'ОТЛИЧНО!', 'СУПЕР!', 'ВАУ!', 'БОМБА!',
+            'КЛАСС!', 'МОЛОДЕЦ!', 'ИМБА!', 'ОГОНЬ!', 'ТОП!',
+            'ПЕРФЕКТО!', 'ГЕНИАЛЬНО!', 'ШИКАРНО!', 'ЗВЕРСКИ!', 'ЛЕГЕНДАРНО!'
         ];
         
         const COMBO_COLORS = [
-            '#4fc3f7',
-            '#69f0ae',
-            '#ffd54f',
-            '#ff8a65',
-            '#ff6b9d',
-            '#e040fb',
-            '#7c4dff'
+            '#4fc3f7', '#69f0ae', '#ffd54f', '#ff8a65',
+            '#ff6b9d', '#e040fb', '#7c4dff'
         ];
         
-        // ИСПРАВЛЕНО: убрано дублирование ключа connectors у CROSS
-        // Добавлено отдельное поле connectorCount для правильной проверки
         const BLOCK_TYPES = {
             EMPTY: { connectorCount: 0, connectors: [0,0,0,0], color: '#2c3e50' },
             STRAIGHT: { connectorCount: 2, connectors: 2, variants: [{ connectors: [1,0,1,0] },{ connectors: [0,1,0,1] }] },
@@ -697,18 +1139,19 @@
             getConnectorCount() { return this.connectors.filter(c => c).length; }
         }
         
-        class CircuitBlast {
+        class Loopix {
             constructor() {
                 this.canvas = document.getElementById('mainCanvas');
                 this.ctx = this.canvas.getContext('2d');
+                this.darkOverlay = document.getElementById('darkOverlay');
                 this.gridSize = 6;
                 this.cellSize = 50;
                 this.grid = [];
                 this.score = 0;
-                this.highScore = parseInt(localStorage.getItem('circuitBlastHigh')) || 0;
+                this.highScore = parseInt(localStorage.getItem('loopixHigh')) || 0;
                 this.loops = 0;
                 this.combo = 1;
-                this.maxCombo = parseInt(localStorage.getItem('circuitBlastMaxCombo')) || 0;
+                this.maxCombo = parseInt(localStorage.getItem('loopixMaxCombo')) || 0;
                 this.previewBlocks = [null, null, null];
                 this.selectedSlot = null;
                 this.hoverCell = { x: -1, y: -1 };
@@ -725,6 +1168,30 @@
                 this.lastClickTime = 0;
                 this.clickDelay = 300;
                 this.isProcessingClick = false;
+                
+                this.shakeIntensity = 0;
+                this.shakeDecay = 0.8;
+                this.gameContainer = document.getElementById('gameContainer');
+                this.blockScaleAnimations = new Map();
+                this.slowMotionActive = false;
+                this.timeScale = 1;
+                this.lastTimestamp = 0;
+                
+                // Drag вращение
+                this.dragActive = false;
+                this.dragSlot = -1;
+                this.dragStartX = 0;
+                this.dragStartY = 0;
+                this.dragTotalDistance = 0;
+                this.dragRotateThreshold = 30;
+                this.lastRotateDistance = 0;
+                this.dragWasClick = true;
+                this.dragStartSlot = -1;
+                
+                // Для пульсации цепи
+                this.chainPulsePhase = 0;
+                this.longestChain = null;
+                this.longestChainLength = 0;
                 
                 this.init();
             }
@@ -748,8 +1215,71 @@
                 this.animate();
             }
             
+            toggleSound() {
+                audioManager.toggle();
+            }
+            
+            setVolume(value) {
+                audioManager.setVolume(value);
+            }
+            
+            toggleVibration() {
+                vibrationManager.toggle();
+            }
+            
+            addScreenShake(intensity) {
+                this.shakeIntensity = Math.min(intensity, 15);
+            }
+            
+            updateScreenShake() {
+                if (this.shakeIntensity > 0.5) {
+                    const shakeX = (Math.random() - 0.5) * this.shakeIntensity * 2;
+                    const shakeY = (Math.random() - 0.5) * this.shakeIntensity * 2;
+                    this.gameContainer.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
+                    this.shakeIntensity *= this.shakeDecay;
+                } else {
+                    this.shakeIntensity = 0;
+                    this.gameContainer.style.transform = '';
+                }
+            }
+            
+            addBlockScaleEffect(x, y) {
+                const key = `${x},${y}`;
+                this.blockScaleAnimations.set(key, 1.3);
+            }
+            
+            updateBlockScaleAnimations() {
+                for (const [key, scale] of this.blockScaleAnimations) {
+                    const newScale = scale * 0.85;
+                    if (newScale > 1.05) {
+                        this.blockScaleAnimations.set(key, newScale);
+                    } else {
+                        this.blockScaleAnimations.delete(key);
+                    }
+                }
+            }
+            
+            activateSlowMotion(duration = 1000, timeScale = 0.3) {
+                this.slowMotionActive = true;
+                this.timeScale = timeScale;
+                this.canvas.classList.add('slow-motion-active');
+                
+                setTimeout(() => {
+                    this.slowMotionActive = false;
+                    this.timeScale = 1;
+                    this.canvas.classList.remove('slow-motion-active');
+                }, duration * timeScale);
+            }
+            
+            activateDarkOverlay(duration = 1000) {
+                this.darkOverlay.classList.add('active');
+                setTimeout(() => {
+                    this.darkOverlay.classList.remove('active');
+                }, duration);
+            }
+            
             checkTutorial() {
-                const hasSeenTutorial = localStorage.getItem('circuitBlastTutorial');
+                const hasSeenTutorial = localStorage.getItem('loopixTutorial');
                 if (!hasSeenTutorial) {
                     this.startTutorial();
                 } else {
@@ -765,12 +1295,10 @@
                 document.getElementById('tutorialOverlay').classList.add('show');
                 this.setupTutorialField();
                 this.setupEvents();
-                // Небольшая задержка для гарантии отрисовки
                 setTimeout(() => this.updateTutorialStep(), 100);
             }
             
             setupTutorialField() {
-                // ИСПРАВЛЕНО: сброс сложности при обучении
                 this.difficultyLevel = 0;
                 this.setupGrid();
                 
@@ -789,13 +1317,10 @@
                 this.previewBlocks[2] = null;
                 
                 this.selectedSlot = null;
-                
                 this.updateSlotClasses();
                 
-                // ФИКС: Принудительная отрисовка с задержкой
                 requestAnimationFrame(() => {
                     this.renderPreviews();
-                    // Двойная отрисовка для гарантии
                     setTimeout(() => this.renderPreviews(), 50);
                 });
             }
@@ -845,8 +1370,7 @@
                     const step3 = document.getElementById('step3');
                     const canvasRect = canvas.getBoundingClientRect();
                     
-                    // Позиционируем над игровым полем (верхняя часть)
-                    step3.style.top = (canvasRect.top + 10) + 'px'; // 10px от верха canvas
+                    step3.style.top = (canvasRect.top + 10) + 'px';
                     step3.style.left = '50%';
                     step3.style.transform = 'translateX(-50%)';
                     
@@ -877,11 +1401,10 @@
                 this.tutorialActive = false;
                 document.getElementById('tutorialOverlay').classList.remove('show');
                 document.getElementById('tutorialTarget').style.display = 'none';
-                localStorage.setItem('circuitBlastTutorial', 'true');
+                localStorage.setItem('loopixTutorial', 'true');
                 
                 const slots = document.querySelectorAll('.preview-slot');
                 const canvas = document.getElementById('mainCanvas');
-                const panel = document.getElementById('previewPanel');
                 
                 slots.forEach(slot => {
                     slot.classList.remove('tutorial-active', 'disabled');
@@ -889,7 +1412,6 @@
                 });
                 canvas.classList.remove('canvas-tutorial');
                 canvas.style.pointerEvents = '';
-                panel.style.pointerEvents = '';
                 
                 this.difficultyLevel = 0;
                 this.setupGrid();
@@ -902,7 +1424,7 @@
             }
             
             resetTutorial() {
-                localStorage.removeItem('circuitBlastTutorial');
+                localStorage.removeItem('loopixTutorial');
                 this.newGame();
                 setTimeout(() => {
                     this.startTutorial();
@@ -910,9 +1432,9 @@
             }
             
             resetAllData() {
-                localStorage.removeItem('circuitBlastHigh');
-                localStorage.removeItem('circuitBlastTutorial');
-                localStorage.removeItem('circuitBlastMaxCombo');
+                localStorage.removeItem('loopixHigh');
+                localStorage.removeItem('loopixTutorial');
+                localStorage.removeItem('loopixMaxCombo');
                 this.highScore = 0;
                 this.maxCombo = 0;
                 this.newGame();
@@ -938,6 +1460,7 @@
                     for (let r = 0; r < rotations; r++) block.rotate();
                     this.grid[pos.y][pos.x] = block;
                 }
+                this.findLongestChain();
             }
             
             openSettings() { 
@@ -966,23 +1489,24 @@
             updateSlotClasses() {
                 for (let i = 0; i < 3; i++) {
                     const slot = document.getElementById(`slot${i}`);
-                    slot.classList.remove('selected', 'has-block', 'empty');
+                    slot.classList.remove('selected', 'has-block', 'empty', 'dragging');
                     if (this.previewBlocks[i] === null) slot.classList.add('empty');
                     else {
                         slot.classList.add('has-block');
                         if (this.selectedSlot === i) slot.classList.add('selected');
                     }
+                    if (this.dragActive && this.dragSlot === i) {
+                        slot.classList.add('dragging');
+                    }
                 }
             }
             
-            // ИСПРАВЛЕНО: теперь использует connectorCount вместо перезаписанного connectors
             getAvailableBlockTypes() {
                 const maxConnectors = DIFFICULTY_LEVELS[this.difficultyLevel].maxConnectors;
                 const available = [];
                 
                 for (const [type, data] of Object.entries(BLOCK_TYPES)) {
                     if (type === 'EMPTY') continue;
-                    // Используем connectorCount вместо connectors
                     const typeConnectors = data.connectorCount;
                     if (typeof typeConnectors === 'number' && typeConnectors <= maxConnectors) {
                         available.push(type);
@@ -1029,10 +1553,51 @@
                     slot.replaceWith(slot.cloneNode(true));
                     const freshSlot = document.getElementById(`slot${i}`);
                     
-                    freshSlot.addEventListener('pointerdown', (e) => {
+                    freshSlot.addEventListener('mousedown', (e) => {
                         e.preventDefault();
-                        e.stopPropagation();
-                        this.onSlotClick(i);
+                        this.startDrag(i, e.clientX, e.clientY);
+                    });
+                    
+                    window.addEventListener('mousemove', (e) => {
+                        if (this.dragActive) {
+                            e.preventDefault();
+                            this.updateDrag(e.clientX, e.clientY);
+                        }
+                    });
+                    
+                    window.addEventListener('mouseup', (e) => {
+                        if (this.dragActive) {
+                            e.preventDefault();
+                            this.endDrag();
+                        }
+                    });
+                    
+                    freshSlot.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        this.startDrag(i, touch.clientX, touch.clientY);
+                    }, { passive: false });
+                    
+                    freshSlot.addEventListener('touchmove', (e) => {
+                        if (this.dragActive) {
+                            e.preventDefault();
+                            const touch = e.touches[0];
+                            this.updateDrag(touch.clientX, touch.clientY);
+                        }
+                    }, { passive: false });
+                    
+                    freshSlot.addEventListener('touchend', (e) => {
+                        if (this.dragActive) {
+                            e.preventDefault();
+                            this.endDrag();
+                        }
+                    }, { passive: false });
+                    
+                    freshSlot.addEventListener('touchcancel', (e) => {
+                        if (this.dragActive) {
+                            e.preventDefault();
+                            this.endDrag();
+                        }
                     }, { passive: false });
                 }
                 
@@ -1049,7 +1614,93 @@
                 }, { passive: false });
             }
             
-            onSlotClick(slotIndex) {
+            startDrag(slotIndex, clientX, clientY) {
+                if (this.isGameOver) return;
+                if (this.previewBlocks[slotIndex] === null) return;
+                
+                this.dragActive = true;
+                this.dragSlot = slotIndex;
+                this.dragStartSlot = slotIndex;
+                this.dragStartX = clientX;
+                this.dragStartY = clientY;
+                this.dragTotalDistance = 0;
+                this.lastRotateDistance = 0;
+                this.dragWasClick = true;
+                
+                this.updateSlotClasses();
+                this.renderPreviews();
+            }
+            
+            updateDrag(clientX, clientY) {
+                if (!this.dragActive) return;
+                
+                const deltaX = clientX - this.dragStartX;
+                const deltaY = clientY - this.dragStartY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                this.dragTotalDistance = distance;
+                
+                if (distance > 10) {
+                    this.dragWasClick = false;
+                }
+                
+                let rotateCount = Math.floor(distance / this.dragRotateThreshold);
+                
+                // Ограничение в обучении
+                if (this.tutorialActive && this.tutorialStep === 2 && this.dragSlot === 0) {
+                    const block = this.previewBlocks[0];
+                    if (block.connectors[0] === 1 && block.connectors[1] === 1 && 
+                        block.connectors[2] === 0 && block.connectors[3] === 0) {
+                        this.lastRotateDistance = rotateCount;
+                        return;
+                    }
+                    rotateCount = Math.min(rotateCount, 1);
+                }
+                
+                const rotateDiff = rotateCount - this.lastRotateDistance;
+                
+                if (rotateDiff > 0) {
+                    for (let i = 0; i < rotateDiff; i++) {
+                        this.previewBlocks[this.dragSlot].rotate();
+                        audioManager.playRotate();
+                        vibrationManager.lightVibration();
+                    }
+                    this.renderPreviews();
+                    
+                    if (this.tutorialActive && this.tutorialStep === 2 && this.dragSlot === 0) {
+                        const block = this.previewBlocks[0];
+                        if (block.connectors[0] === 1 && block.connectors[1] === 1 && 
+                            block.connectors[2] === 0 && block.connectors[3] === 0) {
+                            this.nextTutorialStep();
+                        }
+                    }
+                }
+                
+                this.lastRotateDistance = rotateCount;
+            }
+            
+            endDrag() {
+                if (!this.dragActive) return;
+                
+                const wasClick = this.dragWasClick && this.dragTotalDistance < 10;
+                const slotIndex = this.dragStartSlot;
+                const wasDrag = !wasClick && this.dragTotalDistance >= 10;
+                
+                this.dragActive = false;
+                this.dragSlot = -1;
+                
+                if (wasClick) {
+                    this.handleSlotClick(slotIndex);
+                } else if (wasDrag) {
+                    this.selectedSlot = slotIndex;
+                    this.updateSlotClasses();
+                }
+                
+                this.dragStartSlot = -1;
+                this.updateSlotClasses();
+            }
+            
+            handleSlotClick(slotIndex) {
                 if (!this.canProcessClick()) return;
                 if (this.isGameOver) return;
                 if (this.previewBlocks[slotIndex] === null) return;
@@ -1064,17 +1715,6 @@
                         this.nextTutorialStep();
                         this.isProcessingClick = false;
                         return;
-                    } else if (this.tutorialStep === 2 && slotIndex === 0) {
-                        this.previewBlocks[slotIndex].rotate();
-                        this.renderPreviews();
-                        
-                        const block = this.previewBlocks[slotIndex];
-                        if (block.connectors[0] === 1 && block.connectors[1] === 1 && 
-                            block.connectors[2] === 0 && block.connectors[3] === 0) {
-                            this.nextTutorialStep();
-                        }
-                        this.isProcessingClick = false;
-                        return;
                     }
                     this.isProcessingClick = false;
                     return;
@@ -1082,6 +1722,8 @@
                 
                 if (this.selectedSlot === slotIndex) {
                     this.previewBlocks[slotIndex].rotate();
+                    audioManager.playRotate();
+                    vibrationManager.lightVibration();
                 } else {
                     this.selectedSlot = slotIndex;
                 }
@@ -1159,7 +1801,15 @@
                 const block = this.previewBlocks[slotIndex];
                 this.grid[y][x] = block;
                 this.previewBlocks[slotIndex] = null;
-                this.selectedSlot = null;
+                
+                audioManager.playPlace(block.type);
+                this.addBlockScaleEffect(x, y);
+                
+                if (this.selectedSlot === slotIndex) {
+                    this.selectedSlot = null;
+                }
+                
+                this.findLongestChain();
                 
                 if (this.tutorialActive && this.tutorialStep === 3) {
                     const loops = this.findLoops();
@@ -1172,6 +1822,8 @@
                             this.nextTutorialStep();
                         }, 1500);
                     }
+                    this.updateSlotClasses();
+                    this.renderPreviews();
                     return;
                 }
                 
@@ -1182,16 +1834,32 @@
                     
                     if (this.combo > this.maxCombo) {
                         this.maxCombo = this.combo;
-                        localStorage.setItem('circuitBlastMaxCombo', this.maxCombo);
+                        localStorage.setItem('loopixMaxCombo', this.maxCombo);
                     }
+                    
+                    const shakePower = Math.min(maxLoopSize * 2, 12);
+                    this.addScreenShake(shakePower);
+                    
+                    if (maxLoopSize >= 5) {
+                        const slowMoDuration = Math.min(maxLoopSize * 200, 2000);
+                        this.activateSlowMotion(slowMoDuration, 0.4);
+                        this.activateDarkOverlay(slowMoDuration * 0.4);
+                    } else {
+                        this.activateDarkOverlay(500);
+                    }
+                    
+                    audioManager.playCombo(maxLoopSize);
+                    vibrationManager.comboVibration(maxLoopSize);
                     
                     this.assignGlowColors(loops);
                     this.showComboPopup(loops);
-                    // ИСПРАВЛЕНО: передаём количество петель для повышения сложности
                     this.clearLoops(loops, loops.length);
                     this.increaseDifficulty(loops.length);
+                    
+                    setTimeout(() => this.findLongestChain(), 100);
                 } else {
                     this.combo = 1;
+                    this.addScreenShake(2);
                 }
                 
                 const remaining = this.previewBlocks.filter(b => b !== null).length;
@@ -1206,11 +1874,31 @@
                 this.updateScore();
             }
             
-            // ИСПРАВЛЕНО: теперь принимает количество петлей за ход, а не общее число
-            // Сложность повышается быстрее при больших комбо
+            findLongestChain() {
+                const visited = new Set();
+                let maxChain = null;
+                let maxLength = 0;
+                
+                for (let y = 0; y < this.gridSize; y++) {
+                    for (let x = 0; x < this.gridSize; x++) {
+                        const key = `${x},${y}`;
+                        if (!this.grid[y][x] || visited.has(key)) continue;
+                        
+                        const component = this.findConnectedComponent(x, y);
+                        for (const cellKey of component) visited.add(cellKey);
+                        
+                        if (!this.isClosedLoop(component) && component.size > maxLength) {
+                            maxLength = component.size;
+                            maxChain = component;
+                        }
+                    }
+                }
+                
+                this.longestChain = maxChain;
+                this.longestChainLength = maxLength;
+            }
+            
             increaseDifficulty(chainsCleared) {
-                // Повышаем сложность в зависимости от количества петлей за один ход
-                // и накопленного общего счёта петель
                 if (this.difficultyLevel < 2 && (chainsCleared >= 3 || this.loops >= 10)) {
                     this.difficultyLevel = 2;
                 } else if (this.difficultyLevel < 1 && (chainsCleared >= 2 || this.loops >= 3)) {
@@ -1250,6 +1938,7 @@
                 this.hammerMode = true;
                 this.hammerUsed = true;
                 document.getElementById('hammerBtn').classList.add('disabled');
+                document.getElementById('hammerIndicator').classList.add('show');
                 this.canvas.classList.add('hammer-mode');
                 this.selectedSlot = null;
                 this.updateSlotClasses();
@@ -1259,9 +1948,15 @@
                 this.createExplosion(x, y, '#ffd54f');
                 this.grid[y][x] = null;
                 
+                audioManager.playClear();
+                
                 this.hammerMode = false;
                 this.canvas.classList.remove('hammer-mode');
                 this.canvas.classList.remove('hammer-target');
+                document.getElementById('hammerIndicator').classList.remove('show');
+                
+                this.addScreenShake(3);
+                this.findLongestChain();
             }
             
             showComboPopup(loops) {
@@ -1483,6 +2178,17 @@
                 const gridX = Math.floor(x / this.cellSize);
                 const gridY = Math.floor(y / this.cellSize);
                 
+                let scaleX = px + s/2;
+                let scaleY = py + s/2;
+                let currentScale = 1;
+                
+                if (!isPreview) {
+                    const key = `${gridX},${gridY}`;
+                    if (this.blockScaleAnimations.has(key)) {
+                        currentScale = this.blockScaleAnimations.get(key);
+                    }
+                }
+                
                 const connected = isPreview ? [false, false, false, false] : [
                     this.hasConnection(gridX, gridY, 0),
                     this.hasConnection(gridX, gridY, 1),
@@ -1493,6 +2199,14 @@
                 let hasFree = false;
                 if (!isPreview && this.grid[gridY][gridX]) {
                     hasFree = this.hasFreeConnectors(gridX, gridY);
+                }
+                
+                ctx.save();
+                
+                if (currentScale !== 1) {
+                    ctx.translate(scaleX, scaleY);
+                    ctx.scale(currentScale, currentScale);
+                    ctx.translate(-scaleX, -scaleY);
                 }
                 
                 if (glowColor && !isPreview) {
@@ -1587,12 +2301,7 @@
                 ctx.arc(centerX, centerY, glowColor ? 7 : (isHighlighted ? 6 : 5), 0, Math.PI * 2);
                 ctx.fill();
                 
-                if (hasFree && !isHighlighted && !glowColor) {
-                    ctx.fillStyle = '#ff6b9d';
-                    ctx.beginPath();
-                    ctx.arc(px + s - 4, py + 4, 2.5, 0, Math.PI * 2);
-                    ctx.fill();
-                }
+                ctx.restore();
             }
             
             hasFreeConnectors(x, y) {
@@ -1632,6 +2341,59 @@
                     this.ctx.stroke();
                 }
                 
+                // Отрисовка пульсации самой длинной цепи
+                if (this.longestChain && this.longestChainLength >= 3) {
+                    this.chainPulsePhase = (this.chainPulsePhase + 0.05) % (Math.PI * 2);
+                    const pulseIntensity = 0.5 + 0.5 * Math.sin(this.chainPulsePhase);
+                    
+                    for (const cellKey of this.longestChain) {
+                        const [cx, cy] = cellKey.split(',').map(Number);
+                        const block = this.grid[cy][cx];
+                        if (!block) continue;
+                        
+                        const directions = [
+                            {dx: 0, dy: -1, dir: 0, opposite: 2},
+                            {dx: 1, dy: 0, dir: 1, opposite: 3},
+                            {dx: 0, dy: 1, dir: 2, opposite: 0},
+                            {dx: -1, dy: 0, dir: 3, opposite: 1}
+                        ];
+                        
+                        for (const {dx, dy, dir, opposite} of directions) {
+                            if (block.getConnector(dir)) {
+                                const nx = cx + dx, ny = cy + dy;
+                                const neighborKey = `${nx},${ny}`;
+                                if (this.longestChain.has(neighborKey)) {
+                                    const neighbor = this.grid[ny][nx];
+                                    if (neighbor && neighbor.getConnector(opposite)) {
+                                        const startX = cx * this.cellSize + this.cellSize / 2;
+                                        const startY = cy * this.cellSize + this.cellSize / 2;
+                                        const endX = nx * this.cellSize + this.cellSize / 2;
+                                        const endY = ny * this.cellSize + this.cellSize / 2;
+                                        
+                                        this.ctx.beginPath();
+                                        this.ctx.moveTo(startX, startY);
+                                        this.ctx.lineTo(endX, endY);
+                                        
+                                        const gradient = this.ctx.createLinearGradient(startX, startY, endX, endY);
+                                        const color1 = `rgba(79, 195, 247, ${0.3 + pulseIntensity * 0.5})`;
+                                        const color2 = `rgba(105, 240, 174, ${0.3 + pulseIntensity * 0.5})`;
+                                        gradient.addColorStop(0, color1);
+                                        gradient.addColorStop(1, color2);
+                                        
+                                        this.ctx.strokeStyle = gradient;
+                                        this.ctx.lineWidth = 3 + pulseIntensity * 3;
+                                        this.ctx.lineCap = 'round';
+                                        this.ctx.shadowColor = '#4fc3f7';
+                                        this.ctx.shadowBlur = 10 + pulseIntensity * 10;
+                                        this.ctx.stroke();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    this.ctx.shadowBlur = 0;
+                }
+                
                 if (this.hoverCell.x >= 0) {
                     const hx = this.hoverCell.x * this.cellSize;
                     const hy = this.hoverCell.y * this.cellSize;
@@ -1669,11 +2431,12 @@
                     }
                 }
                 
+                const particleDelta = this.slowMotionActive ? this.timeScale : 1;
                 this.particles = this.particles.filter(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.15;
-                    p.life -= p.decay || 0.02;
+                    p.x += p.vx * particleDelta;
+                    p.y += p.vy * particleDelta;
+                    p.vy += 0.15 * particleDelta;
+                    p.life -= (p.decay || 0.02) * particleDelta;
                     if (p.life > 0) {
                         this.ctx.globalAlpha = p.life;
                         this.ctx.fillStyle = p.color;
@@ -1690,9 +2453,23 @@
                 });
             }
             
-            animate() {
+            animate(timestamp) {
+                if (this.slowMotionActive) {
+                    if (!this.lastTimestamp) {
+                        this.lastTimestamp = timestamp;
+                    }
+                    const elapsed = timestamp - this.lastTimestamp;
+                    if (elapsed < 16 / this.timeScale) {
+                        requestAnimationFrame((ts) => this.animate(ts));
+                        return;
+                    }
+                    this.lastTimestamp = timestamp;
+                }
+                
+                this.updateScreenShake();
+                this.updateBlockScaleAnimations();
                 this.draw();
-                requestAnimationFrame(() => this.animate());
+                requestAnimationFrame((ts) => this.animate(ts));
             }
             
             updateScore() {
@@ -1701,7 +2478,7 @@
                 document.getElementById('maxCombo').textContent = this.maxCombo;
                 if (this.score > this.highScore) {
                     this.highScore = this.score;
-                    localStorage.setItem('circuitBlastHigh', this.highScore);
+                    localStorage.setItem('loopixHigh', this.highScore);
                     document.getElementById('highScore').textContent = this.highScore;
                 }
             }
@@ -1718,7 +2495,6 @@
                 this.score = 0;
                 this.loops = 0;
                 this.combo = 1;
-                // ИСПРАВЛЕНО: сброс сложности при новой игре
                 this.difficultyLevel = 0;
                 this.previewBlocks = [null, null, null];
                 this.selectedSlot = null;
@@ -1728,9 +2504,22 @@
                 this.particles = [];
                 this.hammerMode = false;
                 this.hammerUsed = false;
-                this.canvas.classList.remove('hammer-mode', 'hammer-target');
+                this.shakeIntensity = 0;
+                this.blockScaleAnimations.clear();
+                this.slowMotionActive = false;
+                this.timeScale = 1;
+                this.dragActive = false;
+                this.dragSlot = -1;
+                this.dragStartSlot = -1;
+                this.longestChain = null;
+                this.longestChainLength = 0;
+                this.chainPulsePhase = 0;
+                this.darkOverlay.classList.remove('active');
+                this.canvas.classList.remove('hammer-mode', 'hammer-target', 'slow-motion-active');
                 document.getElementById('hammerBtn').classList.remove('disabled');
+                document.getElementById('hammerIndicator').classList.remove('show');
                 document.getElementById('gameOverScreen').classList.remove('show');
+                this.gameContainer.style.transform = '';
                 this.setupGrid();
                 this.placeInitialBlocks();
                 this.generateNewSet();
@@ -1738,7 +2527,7 @@
             }
         }
         
-        const game = new CircuitBlast();
+        const game = new Loopix();
     </script>
 </body>
 </html>
