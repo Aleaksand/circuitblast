@@ -1,13 +1,28 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.yourname.circuitblast" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-    <name>CircuitBlast</name>
+<widget id="com.yourname.loopix" version="1.0.0"
+    xmlns="http://www.w3.org/ns/widgets"
+    xmlns:cdv="http://cordova.apache.org/ns/1.0">
+
+    <name>Loopix</name>
+
     <description>
-        A sample Apache Cordova application that responds to the deviceready event.
+        Loopix — addictive puzzle game with connections, combos and strategy.
     </description>
-    <author email="dev@cordova.apache.org" href="https://cordova.apache.org">
-        Apache Cordova Team
+
+    <author email="you@email.com" href="https://your-site.com">
+        Your Name
     </author>
+
     <content src="index.html" />
+
+    <!-- Разрешения -->
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
+
+    <!-- Android настройки -->
+    <platform name="android">
+        <preference name="Fullscreen" value="true" />
+        <preference name="Orientation" value="portrait" />
+    </platform>
+
 </widget>
