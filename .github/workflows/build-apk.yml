@@ -29,14 +29,14 @@ jobs:
     - name: Install Cordova
       run: npm install -g cordova
     
-    # 📁 проект
+    # 📁 создаём проект
     - name: Create Cordova Project
       run: |
         cordova create build-temp com.yourname.circuitblast CircuitBlast
         cp -r www build-temp/
         cp config.xml build-temp/
     
-    # 📱 платформа
+    # 📱 добавляем платформу
     - name: Add Android Platform
       working-directory: build-temp
       run: cordova platform add android
@@ -49,12 +49,12 @@ jobs:
         sed -i "s/android-versionCode=\"[0-9]*\"/android-versionCode=\"$VERSION_CODE\"/" config.xml || \
         sed -i "s/<widget/<widget android-versionCode=\"$VERSION_CODE\"/" config.xml
     
-    # 🔐 keystore
+    # 🔐 декод keystore
     - name: Decode Keystore
       run: |
         echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > my.keystore
     
-    # 🔐 cordova build.json (ВАЖНО)
+    # 🔐 создаём build.json
     - name: Create build.json
       working-directory: build-temp
       run: |
@@ -65,21 +65,34 @@ jobs:
               "keystore": "../my.keystore",
               "storePassword": "${{ secrets.KEYSTORE_PASSWORD }}",
               "alias": "${{ secrets.KEY_ALIAS }}",
-              "password": "${{ secrets.KEY_PASSWORD }}",
-              "keystoreType": ""
+              "password": "${{ secrets.KEY_PASSWORD }}"
             }
           }
         }
         EOF
     
-    # 📦 сборка
+    # 🧪 проверка (чтобы больше не было ошибок)
+    - name: Debug build.json
+      working-directory: build-temp
+      run: |
+        echo "📄 Содержимое build.json:"
+        cat build.json
+        echo "📁 Файлы:"
+        ls -la
+    
+    # 📦 сборка AAB
     - name: Build AAB
       working-directory: build-temp
-      run: cordova build android --release --buildConfig=build.json -- --packageType=bundle
+      run: |
+        cordova build android --release \
+        --buildConfig=$(pwd)/build.json \
+        -- --packageType=bundle
     
     # 🔍 найти AAB
     - name: Find AAB
       run: |
+        echo "🔍 Ищем AAB..."
+        find . -name "*.aab"
         AAB_PATH=$(find . -name "*.aab" | head -n 1)
         echo "AAB_PATH=$AAB_PATH" >> $GITHUB_ENV
     
