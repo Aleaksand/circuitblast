@@ -3,26 +3,56 @@
     xmlns="http://www.w3.org/ns/widgets"
     xmlns:cdv="http://cordova.apache.org/ns/1.0">
 
+    <!-- 🎮 Название -->
     <name>Loopix</name>
 
+    <!-- 📝 Описание -->
     <description>
         Loopix — addictive puzzle game with connections, combos and strategy.
     </description>
 
-    <author email="sshrsevan@gmail.com"
+    <!-- 👤 Автор -->
+    <author email="sshrsevan@gmail.com">
         Tsevan
     </author>
 
+    <!-- 📄 Главный файл -->
     <content src="index.html" />
 
-    <!-- Разрешения -->
+    <!-- 🌐 Разрешения -->
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
 
-    <!-- Android настройки -->
+    <!-- ⚙️ Общие настройки -->
+    <preference name="Orientation" value="portrait" />
+    <preference name="Fullscreen" value="true" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="AndroidXEnabled" value="true" />
+
+    <!-- 🚀 Производительность -->
+    <preference name="KeepRunning" value="true" />
+    <preference name="LoadUrlTimeoutValue" value="700000" />
+
+    <!-- 📱 Android -->
     <platform name="android">
-        <preference name="Fullscreen" value="true" />
-        <preference name="Orientation" value="portrait" />
+
+        <!-- 🎨 Иконка (если не используешь cordova-res) -->
+        <icon src="res/icon.png" />
+
+        <!-- 📺 Splash screen -->
+        <preference name="SplashScreen" value="screen" />
+        <preference name="SplashScreenDelay" value="2000" />
+        <preference name="AutoHideSplashScreen" value="true" />
+
+        <!-- 📏 UI -->
+        <preference name="StatusBarOverlaysWebView" value="false" />
+        <preference name="StatusBarBackgroundColor" value="#000000" />
+
+        <!-- 🔐 Безопасность -->
+        <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application">
+            <application android:usesCleartextTraffic="true" />
+        </edit-config>
+
     </platform>
 
 </widget>
