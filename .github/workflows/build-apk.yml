@@ -26,7 +26,7 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
     
-    - name: Install Cordova + cordova-res
+    - name: Install Cordova + tools
       run: |
         npm install -g cordova
         npm install -g cordova-res
@@ -37,17 +37,17 @@ jobs:
         cordova create build-temp com.tsevan.loopix Loopix
         cp -r www build-temp/
         cp config.xml build-temp/
-        cp -r resources build-temp/ || echo "no resources folder"
+        cp -r resources build-temp/
+    
+    # 🎨 Генерация иконок и splash
+    - name: Generate Icons & Splash
+      working-directory: build-temp
+      run: cordova-res android
     
     # 📱 Android
     - name: Add Android Platform
       working-directory: build-temp
       run: cordova platform add android
-    
-    # 🎨 Генерация иконок (ТОЛЬКО иконки, без splash)
-    - name: Generate icons
-      working-directory: build-temp
-      run: cordova-res android --type icon
     
     # 🔢 versionCode
     - name: Set versionCode
@@ -79,7 +79,7 @@ jobs:
         }
         EOF
     
-    # 📦 сборка
+    # 📦 сборка AAB
     - name: Build AAB
       working-directory: build-temp
       run: |
@@ -90,8 +90,6 @@ jobs:
     # 🔍 найти файл
     - name: Find AAB
       run: |
-        echo "🔍 Ищем AAB..."
-        find . -name "*.aab"
         AAB_PATH=$(find . -name "*.aab" | head -n 1)
         echo "AAB_PATH=$AAB_PATH" >> $GITHUB_ENV
     
