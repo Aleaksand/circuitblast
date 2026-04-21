@@ -32,7 +32,7 @@ jobs:
     # 📁 создаём проект
     - name: Create Cordova Project
       run: |
-        cordova create build-temp com.yourname.loopix Loopix
+        cordova create build-temp com.tsevan.loopix Loopix
         cp -r www build-temp/
         cp config.xml build-temp/
     
