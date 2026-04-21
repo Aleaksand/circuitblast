@@ -3,48 +3,40 @@
     xmlns="http://www.w3.org/ns/widgets"
     xmlns:cdv="http://cordova.apache.org/ns/1.0">
 
-    <!-- 🎮 Название -->
     <name>Loopix</name>
 
-    <!-- 📝 Описание -->
     <description>
         Loopix — addictive puzzle game with connections, combos and strategy.
     </description>
 
-    <!-- 👤 Автор -->
     <author email="sshrsevan@gmail.com">
         Tsevan
     </author>
 
-    <!-- 📄 Главный файл -->
     <content src="index.html" />
 
-    <!-- 🌐 Разрешения -->
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
 
-    <!-- ⚙️ Общие настройки -->
+    <!-- Общие настройки -->
     <preference name="Orientation" value="portrait" />
     <preference name="Fullscreen" value="true" />
-    <preference name="DisallowOverscroll" value="true" />
     <preference name="AndroidXEnabled" value="true" />
 
-    <!-- 🚀 Производительность -->
-    <preference name="KeepRunning" value="true" />
-    <preference name="LoadUrlTimeoutValue" value="700000" />
-
-    <!-- 📱 Android -->
     <platform name="android">
-    
-        <!-- Splash -->
+
+        <!-- Иконка -->
+        <icon src="resources/icon.png" />
+
+        <!-- Новый splash (Android 12+) -->
+        <preference name="AndroidWindowSplashScreenAnimatedIcon" value="resources/splash.png" />
+        <preference name="AndroidWindowSplashScreenBackground" value="#ffffff" />
+
+        <!-- Старый splash -->
         <preference name="SplashScreen" value="screen" />
         <preference name="SplashScreenDelay" value="2000" />
         <preference name="AutoHideSplashScreen" value="true" />
-    
-        <!-- UI -->
-        <preference name="StatusBarOverlaysWebView" value="false" />
-        <preference name="StatusBarBackgroundColor" value="#000000" />
-    
+
     </platform>
 
 </widget>
