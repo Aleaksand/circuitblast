@@ -1,4 +1,4 @@
-name: Build APK
+name: Build AAB
 
 on:
   push:
@@ -39,50 +39,61 @@ jobs:
       working-directory: build-temp
       run: cordova platform add android
     
-    - name: Build APK
+    # 🔢 versionCode
+    - name: Set versionCode
       working-directory: build-temp
-      run: cordova build android --release -- --packageType=apk
-    
-    - name: Find and Sign APK
       run: |
-        # Ищем APK по всему workspace
-        echo "🔍 Ищем APK..."
-        find ${{ github.workspace }} -name "*.apk" -type f 2>/dev/null
-        
-        # Пробуем разные возможные пути
-        APK_PATHS=(
-          "${{ github.workspace }}/build-temp/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk"
-          "${{ github.workspace }}/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk"
-          "${{ github.workspace }}/build-temp/platforms/android/app/build/outputs/apk/release/app-release.apk"
-        )
-        
-        APK_PATH=""
-        for path in "${APK_PATHS[@]}"; do
-          if [ -f "$path" ]; then
-            APK_PATH="$path"
-            echo "✅ APK найде: $APK_PATH"
-            break
-          fi
-        done
-        
-        if [ -z "$APK_PATH" ]; then
-          echo "❌ APK не найден ни по одному из путей"
-          exit 1
-        fi
-        
-        APK_DIR=$(dirname "$APK_PATH")
-        
-        # Генерируем keystore
-        keytool -genkey -v -keystore "$APK_DIR/my.keystore" -keyalg RSA -keysize 2048 -validity 10000 -alias app -storepass password -keypass password -dname "CN=Android,O=Android,C=US"
-        
-        # Подписываем APK
-        APK_SIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -r | head -n 1)
-        $APK_SIGNER sign --ks "$APK_DIR/my.keystore" --ks-key-alias app --ks-pass pass:password --key-pass pass:password --out "${{ github.workspace }}/CircuitBlast.apk" "$APK_PATH"
-        
-        echo "FINAL_APK_PATH=${{ github.workspace }}/CircuitBlast.apk" >> $GITHUB_ENV
+        VERSION_CODE=${{ github.run_number }}
+        sed -i "s/android-versionCode=\"[0-9]*\"/android-versionCode=\"$VERSION_CODE\"/" config.xml || \
+        sed -i "s/<widget/<widget android-versionCode=\"$VERSION_CODE\"/" config.xml
     
-    - name: Upload APK
+    # 🔐 keystore из secrets
+    - name: Decode Keystore
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > my.keystore
+    
+    # 🔐 настройка подписи
+    - name: Setup signing
+      working-directory: build-temp/platforms/android
+      run: |
+        cat >> gradle.properties <<EOF
+        MYAPP_UPLOAD_STORE_FILE=../../../../my.keystore
+        MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.KEY_ALIAS }}
+        MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}
+        MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+        EOF
+
+        sed -i '/buildTypes {/a\
+            signingConfigs {\
+                release {\
+                    storeFile file(MYAPP_UPLOAD_STORE_FILE)\
+                    storePassword MYAPP_UPLOAD_STORE_PASSWORD\
+                    keyAlias MYAPP_UPLOAD_KEY_ALIAS\
+                    keyPassword MYAPP_UPLOAD_KEY_PASSWORD\
+                }\
+            }\
+        ' app/build.gradle
+
+        sed -i 's/buildTypes {/buildTypes {\
+            release {\
+                signingConfig signingConfigs.release\
+            }\
+        /' app/build.gradle
+    
+    # 📦 сборка AAB
+    - name: Build AAB
+      working-directory: build-temp
+      run: cordova build android --release -- --packageType=bundle
+    
+    # 🔍 найти файл
+    - name: Find AAB
+      run: |
+        AAB_PATH=$(find . -name "*.aab" | head -n 1)
+        echo "AAB_PATH=$AAB_PATH" >> $GITHUB_ENV
+    
+    # 📤 сохранить как артефакт
+    - name: Upload AAB
       uses: actions/upload-artifact@v4
       with:
-        name: CircuitBlast-APK
-        path: ${{ env.FINAL_APK_PATH }}
+        name: CircuitBlast-AAB
+        path: ${{ env.AAB_PATH }}
