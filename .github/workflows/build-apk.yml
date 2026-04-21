@@ -37,8 +37,6 @@ jobs:
         cordova create build-temp com.tsevan.loopix Loopix
         cp -r www build-temp/
         cp config.xml build-temp/
-        
-        # копируем resources (иконка)
         cp -r resources build-temp/ || echo "no resources folder"
     
     # 📱 Android
@@ -46,10 +44,10 @@ jobs:
       working-directory: build-temp
       run: cordova platform add android
     
-    # 🎨 Генерация иконок
+    # 🎨 Генерация иконок (БЕЗ splash)
     - name: Generate icons
       working-directory: build-temp
-      run: cordova-res android
+      run: cordova-res android --skip-splash
     
     # 🔢 versionCode
     - name: Set versionCode
