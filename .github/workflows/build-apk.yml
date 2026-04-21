@@ -50,7 +50,7 @@ jobs:
     # 🔐 keystore из secrets
     - name: Decode Keystore
       run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > my.keystore
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > my.keystore
     
     # 🔐 настройка подписи
     - name: Setup signing
