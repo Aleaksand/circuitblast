@@ -44,10 +44,10 @@ jobs:
       working-directory: build-temp
       run: cordova platform add android
     
-    # 🎨 Генерация иконок (БЕЗ splash)
+    # 🎨 Генерация иконок (ТОЛЬКО иконки, без splash)
     - name: Generate icons
       working-directory: build-temp
-      run: cordova-res android --skip-splash
+      run: cordova-res android --type icon
     
     # 🔢 versionCode
     - name: Set versionCode
