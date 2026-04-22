@@ -2,8 +2,7 @@ name: Build Loopix APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -44,30 +43,22 @@ jobs:
       - name: Add Android Platform
         working-directory: build-temp
         run: |
-          cordova platform rm android || true
-          cordova platform add android
+          cordova platform add android@13
 
-      # 🔥 КРИТИЧНО: prepare (фикс ошибки Api.js)
-      - name: Prepare Cordova
-        working-directory: build-temp
-        run: cordova prepare android
-
-      # 🔧 gradle fixes
-      - name: Fix Gradle
+      # 🔧 ФИКС Kotlin/JVM (ОЧЕНЬ ВАЖНО)
+      - name: Fix Gradle settings
         working-directory: build-temp
         run: |
-          touch platforms/android/gradle.properties
-          echo "org.gradle.jvmargs=-Xmx2048m" >> platforms/android/gradle.properties
-          echo "android.useAndroidX=true" >> platforms/android/gradle.properties
-          echo "android.enableJetifier=true" >> platforms/android/gradle.properties
+          mkdir -p platforms/android
+          echo "org.gradle.jvmargs=-Xmx4096m" >> platforms/android/gradle.properties
           echo "kotlin.jvm.target=11" >> platforms/android/gradle.properties
+          echo "android.suppressUnsupportedCompileSdk=34" >> platforms/android/gradle.properties
 
-      # 🔌 плагины (ПОСЛЕ prepare!)
+      # 🔌 ПЛАГИНЫ (БЕЗ КОНФЛИКТОВ)
       - name: Add plugins
         working-directory: build-temp
         run: |
           cordova plugin add cordova-plugin-x-socialsharing
-          cordova plugin add cordova-plugin-yandex-ads --force
 
       # 🔢 versionCode
       - name: Set versionCode
@@ -99,7 +90,7 @@ jobs:
           }
           EOF
 
-      # 📦 сборка
+      # 📦 сборка APK
       - name: Build APK
         working-directory: build-temp
         run: |
